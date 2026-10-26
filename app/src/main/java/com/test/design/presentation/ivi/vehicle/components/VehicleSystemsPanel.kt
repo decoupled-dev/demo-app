@@ -2,7 +2,13 @@ package com.test.design.presentation.ivi.vehicle.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -233,10 +239,21 @@ private fun FlowConnector(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
+    val shimmer = rememberInfiniteTransition(label = "flow_shimmer")
+    val shift by shimmer.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "flow_shift",
+    )
+    val peak = 0.18f + shift * 0.64f
     Box(
         modifier = modifier
             .padding(horizontal = 6.dp)
-            .height(3.dp)
+            .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.6f)),
     ) {
@@ -246,7 +263,13 @@ private fun FlowConnector(
                 .fillMaxWidth(strength.coerceIn(0.08f, 1f))
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(color.copy(alpha = 0.2f), color),
+                        colorStops = arrayOf(
+                            0f to color.copy(alpha = 0.15f),
+                            (peak - 0.1f).coerceIn(0.02f, 0.9f) to color,
+                            peak.coerceIn(0.08f, 0.94f) to Color.White.copy(alpha = 0.85f),
+                            (peak + 0.1f).coerceIn(0.12f, 0.98f) to color,
+                            1f to color.copy(alpha = 0.9f),
+                        ),
                     ),
                 ),
         )

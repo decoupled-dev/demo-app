@@ -1,16 +1,48 @@
 package com.test.design.presentation.ivi.vehicle
 
-import com.test.design.core.mvi.MviViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.test.design.data.car.CarVehicleRepository
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 
-class VehicleViewModel : MviViewModel<VehicleUiState, VehicleEvent>(VehicleUiState()) {
+class VehicleViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
 
-    override fun onEvent(event: VehicleEvent) {
+    private val repository = CarVehicleRepository(application)
+    private val _state = MutableStateFlow(VehicleUiState())
+    val state: StateFlow<VehicleUiState> = _state.asStateFlow()
+
+    init {
+        repository.signals
+            .onEach { signals -> setState { withLiveSignals(signals) } }
+            .launchIn(viewModelScope)
+        repository.start()
+    }
+
+    override fun onCleared() {
+        repository.stop()
+        super.onCleared()
+    }
+
+    fun onEvent(event: VehicleEvent) {
+        if (_state.value.isLive && event.isDemoOnly) return
         when (event) {
             is VehicleEvent.SelectDriveMode -> setState {
-                copy(
-                    driveMode = event.mode,
-                    regenLevel = event.mode.defaultRegenLevel(),
-                )
+                if (isLive) {
+                    copy(driveMode = event.mode)
+                } else {
+                    copy(
+                        driveMode = event.mode,
+                        regenLevel = event.mode.defaultRegenLevel(),
+                    )
+                }
             }
             is VehicleEvent.SelectSystem -> setState {
                 copy(
@@ -47,12 +79,24 @@ class VehicleViewModel : MviViewModel<VehicleUiState, VehicleEvent>(VehicleUiSta
                     batteryPercent >= 70 -> 45
                     else -> 88
                 }
+                val miles = (next * 2.9f).toInt()
                 copy(
                     batteryPercent = next,
-                    rangeMiles = (next * 2.9f).toInt(),
+                    rangeMiles = miles,
+                    rangeLabel = "$miles mi",
                     isCharging = next < 70,
                 )
             }
         }
     }
+
+    private fun setState(reducer: VehicleUiState.() -> VehicleUiState) {
+        _state.update(reducer)
+    }
 }
+
+private val VehicleEvent.isDemoOnly: Boolean
+    get() = this is VehicleEvent.CycleBatteryDemo ||
+        this is VehicleEvent.ToggleCharging ||
+        this is VehicleEvent.CycleRegenLevel ||
+        this is VehicleEvent.SelectSystem

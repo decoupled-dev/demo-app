@@ -1,7 +1,9 @@
 package com.test.design.presentation.ivi.glanceables
 
 import androidx.activity.viewModels
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.test.design.core.LocalDrivingUxState
 import com.test.design.core.cluster.ClusterUiState
+import com.test.design.core.theme.LocalAppThemeMode
+import com.test.design.core.theme.resolveDarkTheme
 import com.test.design.presentation.ivi.vehicle.VehicleViewModel
 
 /** Scalable UI `driving_status` TaskPanel — speed / range / gear glanceable. */
@@ -45,7 +49,7 @@ class DrivingStatusGlanceActivity : GlanceableActivity() {
                 speedLimitMph = cluster.speedLimitMph,
                 gear = cluster.gear,
                 batteryPercent = vehicleState.batteryPercent,
-                rangeMiles = vehicleState.rangeMiles,
+                rangeLabel = vehicleState.rangeLabel,
                 modifier = Modifier.fillMaxSize(),
             )
         }
@@ -58,14 +62,17 @@ fun DrivingStatusGlance(
     speedLimitMph: Int,
     gear: String,
     batteryPercent: Int,
-    rangeMiles: Int,
+    rangeLabel: String,
     modifier: Modifier = Modifier,
 ) {
+    val colors = glancePalette()
+    val shape = RoundedCornerShape(20.dp)
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = GlanceCardBg,
-        shadowElevation = 10.dp,
+        shape = shape,
+        color = colors.card,
+        border = colors.cardBorder(),
+        shadowElevation = if (colors.light) 2.dp else 10.dp,
     ) {
         Column(
             modifier = Modifier
@@ -80,12 +87,12 @@ fun DrivingStatusGlance(
             ) {
                 Text(
                     text = "$speedMph MPH",
-                    color = Color.White,
+                    color = colors.title,
                     fontSize = 48.sp,
                     fontWeight = FontWeight.Bold,
                     lineHeight = 52.sp,
                 )
-                SpeedLimitBadge(limit = speedLimitMph)
+                SpeedLimitBadge(limit = speedLimitMph, colors = colors)
             }
 
             Row(
@@ -100,11 +107,11 @@ fun DrivingStatusGlance(
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp)),
                     color = AccentGreen,
-                    trackColor = Color.White.copy(alpha = 0.12f),
+                    trackColor = colors.track,
                 )
                 Text(
-                    text = "$rangeMiles miles",
-                    color = Color.White.copy(alpha = 0.85f),
+                    text = rangeLabel,
+                    color = colors.body,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -125,7 +132,7 @@ fun DrivingStatusGlance(
                         color = when {
                             selected && g == "D" -> AccentRed
                             selected -> AccentGreen
-                            else -> Color.White.copy(alpha = 0.3f)
+                            else -> colors.inactive
                         },
                     )
                 }
@@ -135,26 +142,26 @@ fun DrivingStatusGlance(
 }
 
 @Composable
-private fun SpeedLimitBadge(limit: Int) {
+private fun SpeedLimitBadge(limit: Int, colors: GlancePalette) {
     Box(
         modifier = Modifier
             .size(58.dp)
-            .border(2.5.dp, Color.White.copy(alpha = 0.85f), CircleShape)
+            .border(2.5.dp, colors.hairline, CircleShape)
             .padding(4.dp)
-            .border(2.dp, Color.White.copy(alpha = 0.5f), CircleShape),
+            .border(2.dp, colors.hairline.copy(alpha = 0.5f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = "$limit",
-                color = Color.White,
+                color = colors.title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 18.sp,
             )
             Text(
                 text = "MAX",
-                color = Color.White.copy(alpha = 0.7f),
+                color = colors.muted,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 10.sp,
@@ -163,6 +170,50 @@ private fun SpeedLimitBadge(limit: Int) {
     }
 }
 
-internal val GlanceCardBg = Color(0xF01C1C1E)
+internal data class GlancePalette(
+    val light: Boolean,
+    val card: Color,
+    val title: Color,
+    val body: Color,
+    val muted: Color,
+    val track: Color,
+    val inactive: Color,
+    val hairline: Color,
+)
+
+private val DarkGlance = GlancePalette(
+    light = false,
+    card = Color(0xF01C1C1E),
+    title = Color.White,
+    body = Color.White.copy(alpha = 0.85f),
+    muted = Color.White.copy(alpha = 0.55f),
+    track = Color.White.copy(alpha = 0.14f),
+    inactive = Color.White.copy(alpha = 0.4f),
+    hairline = Color.White.copy(alpha = 0.85f),
+)
+
+private val LightGlance = GlancePalette(
+    light = true,
+    card = Color(0xFFFBFCFD),
+    title = Color(0xFF1A1C1E),
+    body = Color(0xFF2C3138),
+    muted = Color(0xFF5C6570),
+    track = Color(0xFFD2D7DF),
+    inactive = Color(0xFF6B7280),
+    hairline = Color(0xFF1A1C1E),
+)
+
+internal val GlanceCardBg = DarkGlance.card
+
+@Composable
+internal fun glancePalette(): GlancePalette {
+    val dark = LocalAppThemeMode.current.resolveDarkTheme(isSystemInDarkTheme())
+    return if (dark) DarkGlance else LightGlance
+}
+
+internal fun GlancePalette.cardBorder(): BorderStroke? =
+    if (light) BorderStroke(1.dp, LightCardStroke) else null
+
+private val LightCardStroke = Color(0xFFD0D5DC)
 private val AccentGreen = Color(0xFF34C759)
 private val AccentRed = Color(0xFFE53935)

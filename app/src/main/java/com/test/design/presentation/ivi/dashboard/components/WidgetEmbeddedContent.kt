@@ -37,6 +37,7 @@ import com.test.design.presentation.ivi.dashboard.widgetContentSharedElement
 import com.test.design.presentation.ivi.dashboard.widgetControlsSharedElement
 import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
+import com.test.design.presentation.ivi.media.nowPlayingSubtitle
 import com.test.design.presentation.ivi.media.components.AnimatedTrackInfo
 import com.test.design.presentation.ivi.media.components.MediaAlbumArt
 import com.test.design.presentation.ivi.media.components.MediaTransportControlsBar
@@ -186,6 +187,7 @@ private fun SharedTransitionScope.MediaWidgetEmbedded(
             MediaAlbumArt(
                 album = state.currentTrack.album,
                 albumShape = albumShape,
+                artwork = state.artwork,
                 compact = true,
                 modifier = Modifier.sharedElement(
                     rememberSharedContentState(key = "album_art"),
@@ -194,6 +196,7 @@ private fun SharedTransitionScope.MediaWidgetEmbedded(
             )
             AnimatedTrackInfo(
                 track = state.currentTrack,
+                subtitle = state.nowPlayingSubtitle(),
                 compact = true,
                 titleColor = contentColor,
                 subtitleColor = contentColor.copy(alpha = 0.75f),
@@ -343,9 +346,11 @@ private fun SharedTransitionScope.VehicleWidgetEmbedded(
             VehicleEnergyCockpit(
                 percent = state.batteryPercent,
                 rangeMiles = state.rangeMiles,
+                rangeLabel = state.rangeLabel,
                 maxRangeMiles = VehicleMaxRangeMiles,
                 isCharging = state.isCharging,
                 chargeRateKw = state.chargeRateKw,
+                energyTitle = state.energyLabel,
                 gaugeShape = gaugeShape,
                 onGaugeClick = { onEvent(VehicleEvent.CycleBatteryDemo) },
                 compact = true,

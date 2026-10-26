@@ -38,12 +38,14 @@ fun AnimatedTemperatureCounter(
         Text(
             text = label,
             style = textStyle ?: if (isCompact) {
-                MaterialTheme.typography.headlineMedium
+                MaterialTheme.typography.titleLarge
             } else {
                 MaterialTheme.typography.displayLarge
             },
             color = color,
             textAlign = TextAlign.Center,
+            maxLines = if (isCompact) 1 else Int.MAX_VALUE,
+            softWrap = !isCompact,
         )
     }
 }

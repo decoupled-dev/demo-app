@@ -6,7 +6,6 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,9 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,9 +44,6 @@ import com.test.design.presentation.ivi.vehicle.VehicleUiState
 import com.test.design.theme.CarBackgroundTokens
 import com.test.design.theme.CarDesignTokens
 import com.test.design.theme.WidgetCardShape
-import com.test.design.theme.rememberClimateCardShape
-import com.test.design.theme.rememberMediaCardShape
-import com.test.design.theme.rememberVehicleCardShape
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -59,7 +53,6 @@ fun SharedTransitionScope.DashboardWidgetCard(
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     isExpanded: Boolean = false,
-    morphExpanded: Boolean = false,
     mediaState: MediaUiState? = null,
     onMediaEvent: ((MediaEvent) -> Unit)? = null,
     climateState: ClimateUiState? = null,
@@ -106,12 +99,7 @@ fun SharedTransitionScope.DashboardWidgetCard(
         DashboardWidget.AssistantGallery -> MaterialTheme.colorScheme.onTertiaryContainer
         else -> MaterialTheme.colorScheme.onSurface
     }
-    val cardShape: Shape = when (widget) {
-        DashboardWidget.Climate -> rememberClimateCardShape(active = morphExpanded)
-        DashboardWidget.Media -> rememberMediaCardShape(playing = morphExpanded)
-        DashboardWidget.Vehicle -> rememberVehicleCardShape(active = morphExpanded)
-        else -> WidgetCardShape
-    }
+    val cardShape: Shape = WidgetCardShape
     val status = widget.liveStatus(
         mediaState = mediaState,
         climateState = climateState,
@@ -147,8 +135,8 @@ fun SharedTransitionScope.DashboardWidgetCard(
                 )
                 .clickable(
                     enabled = !isExpanded,
-                    indication = ripple(color = accent.copy(alpha = 0.35f)),
-                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    interactionSource = null,
                     onClick = onClick,
                 )
                 .padding(CarDesignTokens.SectionPadding),

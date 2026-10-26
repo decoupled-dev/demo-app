@@ -34,6 +34,7 @@ import com.test.design.theme.carTouchTarget
 fun AnimatedTrackInfo(
     track: Track,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     compact: Boolean = false,
     titleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onBackground,
     subtitleColor: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -59,7 +60,7 @@ fun AnimatedTrackInfo(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = animatedTrack.artist,
+                text = subtitle ?: animatedTrack.artist,
                 style = if (compact) MaterialTheme.typography.bodySmall else MaterialTheme.typography.headlineSmall,
                 color = subtitleColor,
                 maxLines = 1,

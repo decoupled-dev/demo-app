@@ -3,6 +3,7 @@ package com.test.design.presentation.ivi.common
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,6 +21,7 @@ import com.test.design.theme.ExpressiveShapes
 import com.test.design.theme.MorphingCornerRadii
 import com.test.design.theme.glassSurfaceColor
 import com.test.design.theme.rememberMorphingRoundedShape
+import com.test.design.theme.softCardShadow
 
 @Composable
 fun DetailSurfaceCard(
@@ -42,6 +44,7 @@ fun MorphingDetailSurfaceCard(
     emphasized: Boolean = false,
     compactRadii: MorphingCornerRadii = DetailCardRestRadii,
     expandedRadii: MorphingCornerRadii = DetailCardExpandedRadii,
+    contentPadding: PaddingValues = PaddingValues(CarDesignTokens.TouchTargetSpacing),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = rememberMorphingRoundedShape(
@@ -51,6 +54,7 @@ fun MorphingDetailSurfaceCard(
         modifier = modifier,
         emphasized = emphasized,
         shape = shape,
+        contentPadding = contentPadding,
         content = content,
     )
 }
@@ -60,6 +64,7 @@ private fun DetailSurfaceCard(
     modifier: Modifier = Modifier,
     emphasized: Boolean = false,
     shape: Shape,
+    contentPadding: PaddingValues = PaddingValues(CarDesignTokens.TouchTargetSpacing),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val motionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
@@ -69,19 +74,21 @@ private fun DetailSurfaceCard(
         label = "detail_card_scale",
     )
     Card(
-        modifier = modifier.graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        },
+        modifier = modifier
+            .softCardShadow(shape)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            },
         shape = shape,
         colors = CardDefaults.cardColors(
             containerColor = glassSurfaceColor(),
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (emphasized) 8.dp else 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(
-            modifier = Modifier.padding(CarDesignTokens.TouchTargetSpacing),
+            modifier = Modifier.padding(contentPadding),
             content = content,
         )
     }

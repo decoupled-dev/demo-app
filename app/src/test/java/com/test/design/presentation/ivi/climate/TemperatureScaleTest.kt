@@ -62,6 +62,50 @@ class TemperatureScaleTest {
     }
 
     @Test
+    fun labelsSkipWhenTheyWouldCollide() {
+        assertTrue(
+            temperatureScaleLabelFits(
+                centerPx = 120f,
+                labelWidthPx = 40f,
+                previousRightPx = 70f,
+                gapPx = 8f,
+            ),
+        )
+        assertFalse(
+            temperatureScaleLabelFits(
+                centerPx = 90f,
+                labelWidthPx = 40f,
+                previousRightPx = 80f,
+                gapPx = 8f,
+            ),
+        )
+    }
+
+    @Test
+    fun dialFitsTheZoneFrom220To320Dpi() {
+        val wide = temperatureDialMetrics(
+            zoneWidthDp = zoneWidthDp(dpi = 220),
+            zoneHeightDp = 480f,
+            showZoneLabel = true,
+        )
+        assertEquals(76f, wide.buttonSize, 0.01f)
+        assertEquals(400f, wide.cardWidth, 0.01f)
+        assertTrue(rowWidth(wide) < zoneWidthDp(220))
+        assertTrue(wide.sidePadding * 2f < wide.cardWidth)
+
+        val dense = temperatureDialMetrics(
+            zoneWidthDp = zoneWidthDp(dpi = 320),
+            zoneHeightDp = 200f,
+            showZoneLabel = true,
+        )
+        assertTrue(rowWidth(dense) <= zoneWidthDp(320) + 0.5f)
+        assertTrue(dense.canvasHeight < 100f)
+        assertTrue(dense.readoutFontSp < 44f)
+        assertTrue(dense.sidePadding * 2f < dense.cardWidth)
+        assertTrue(dense.canvasHeight + dense.readoutLineSp <= 200f)
+    }
+
+    @Test
     fun edgeFadeIsSolidInTheMiddleAndGoneAtTheCorner() {
         assertEquals(1f, temperatureScaleEdgeFade(0f, 200f), 0.001f)
         assertEquals(1f, temperatureScaleEdgeFade(80f, 200f), 0.001f)
@@ -71,3 +115,12 @@ class TemperatureScaleTest {
         assertTrue(nearCorner in 0.05f..0.6f)
     }
 }
+
+/** Landscape dp width of one temperature zone on a 2560×1600 panel. */
+private fun zoneWidthDp(dpi: Int): Float {
+    val panelWidth = 2560f / (dpi / 160f)
+    return (panelWidth - 32f * 2f - 24f) / 2f
+}
+
+private fun rowWidth(metrics: TemperatureDialMetrics): Float =
+    metrics.buttonSize * 2f + metrics.spacing * 2f + metrics.cardWidth

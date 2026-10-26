@@ -11,15 +11,9 @@ chmod +x ./gradlew
 
 Debug APK: `app/build/outputs/apk/debug/app-debug.apk`
 
-## Google Maps
+## Map
 
-In-app maps use the [Maps SDK for Android](https://developers.google.com/maps/documentation/android-sdk/start). Add a key (Maps SDK for Android enabled) to gitignored `local.properties` in the repo root:
-
-```
-MAPS_API_KEY=YOUR_API_KEY
-```
-
-Without a key the app still builds; the map surface stays blank until one is provided. Emulators need a Google APIs / Play system image.
+Home, navigation, and Adaptive Space use [MapLibre Native](https://maplibre.org/) with the free [OpenFreeMap](https://openfreemap.org/) dark style (OpenStreetMap data). No API key. The device needs a network connection to load tiles; attribution stays on the map.
 
 ## Architecture — Adaptive Space (Scalable UI)
 

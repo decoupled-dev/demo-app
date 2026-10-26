@@ -33,7 +33,7 @@ zero-stutter split resize.
 ### Map-Under-Apps (green placeholder)
 `map_panel` is full-bleed stock `MapsPlaceholderActivity` (green). Floating
 `widget_panel` (DrivingRail, 420dp) sits above it — same pattern as in-app
-home. Design `MapActivity` / Google Maps is not used as the map host.
+home. Design `MapActivity` is not used as the map host.
 
 ### Dynamic panel transitions
 OEM events (wire to `CarSystemBarButton` `selectedEvent` / `unselectedEvent`):

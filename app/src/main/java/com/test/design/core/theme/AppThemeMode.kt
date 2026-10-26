@@ -14,4 +14,4 @@ fun AppThemeMode.resolveDarkTheme(systemInDarkTheme: Boolean): Boolean = when (t
     AppThemeMode.Dark -> true
 }
 
-val LocalAppThemeMode = compositionLocalOf { AppThemeMode.Dark }
+val LocalAppThemeMode = compositionLocalOf { AppThemeMode.System }

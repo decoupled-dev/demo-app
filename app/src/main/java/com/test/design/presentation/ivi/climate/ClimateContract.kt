@@ -176,6 +176,12 @@ fun temperatureScaleDragSteps(dragPx: Float, spacingPx: Float): Int {
     return -(dragPx / spacingPx).toInt()
 }
 
+/** Maps a horizontal touch on the fan track to a discrete blower step. */
+fun fanSpeedFromTrackPosition(positionPx: Float, widthPx: Float, maxFanSpeed: Int): Int {
+    if (maxFanSpeed <= 0 || widthPx <= 0f) return 0
+    return (positionPx / widthPx * maxFanSpeed).roundToInt().coerceIn(0, maxFanSpeed)
+}
+
 /** Degrees between labeled ticks. Fahrenheit numbers are wider, so they sit further apart. */
 fun temperatureScaleLabelGap(unit: TemperatureUnit): Int = when (unit) {
     TemperatureUnit.Celsius -> 4

@@ -83,7 +83,7 @@ private val AppLightColorScheme = lightColorScheme(
 
 @Composable
 fun AppTheme(
-    themeMode: AppThemeMode = AppThemeMode.Dark,
+    themeMode: AppThemeMode = AppThemeMode.System,
     darkTheme: Boolean = themeMode.resolveDarkTheme(isSystemInDarkTheme()),
     drivingUxState: DrivingUxState = DrivingUxState.Parked,
     appMotionScheme: AppMotionScheme = AppMotionScheme.Expressive,

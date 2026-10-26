@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.collectLatest
  * Standalone assistant entry — separate from in-app home chrome.
  *
  * Prefers [ImmersiveAssistantOverlayService] (translucent over whatever is on screen).
- * Does **not** cold-start MainActivity: Maps SDK + overlay together spike GL memory
+ * Does **not** cold-start MainActivity: MapLibre + overlay together spike GL memory
  * (~200MB+) and kill emulators when immersive/speaking starts. Open home first, or use
  * `.cursor/scripts/launch-assistant.sh`.
  *

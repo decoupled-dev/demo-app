@@ -4,7 +4,6 @@ import android.content.Intent
 import androidx.activity.viewModels
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,6 +50,7 @@ import com.test.design.presentation.ivi.climate.components.ClimateHvacIcons
 import com.test.design.presentation.ivi.climate.formatTemperature
 import com.test.design.theme.CarDesignTokens
 import com.test.design.theme.climateAmbientColor
+import com.test.design.theme.climateContentAccent
 import com.test.design.theme.temperatureToFraction
 
 /** Scalable UI `climate_glance` TaskPanel — HVAC capsule. */
@@ -92,19 +92,23 @@ fun ClimateGlanceBar(
         min = climateState.minTemperature,
         max = climateState.maxTemperature,
     )
+    val colors = glancePalette()
     val ambient by animateColorAsState(
         targetValue = climateAmbientColor(tempFraction),
         animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec(),
         label = "hvac_ambient",
     )
-    val seatHeatTint = Color(0xFFFF8A65)
+    val accent = climateContentAccent(tempFraction, colors.light)
+    val seatHeatTint = if (colors.light) Color(0xFFE64A19) else Color(0xFFFF8A65)
+    val shape = RoundedCornerShape(24.dp)
 
     Surface(
         onClick = onExpandClimate,
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        color = GlanceCardBg,
-        shadowElevation = 8.dp,
+        shape = shape,
+        color = colors.card,
+        border = colors.cardBorder(),
+        shadowElevation = if (colors.light) 2.dp else 8.dp,
     ) {
         Row(
             modifier = Modifier
@@ -113,9 +117,9 @@ fun ClimateGlanceBar(
                 .background(
                     Brush.horizontalGradient(
                         colors = listOf(
-                            ambient.copy(alpha = 0.18f),
+                            ambient.copy(alpha = if (colors.light) 0.12f else 0.18f),
                             Color.Transparent,
-                            ambient.copy(alpha = 0.10f),
+                            ambient.copy(alpha = if (colors.light) 0.07f else 0.10f),
                         ),
                     ),
                 )
@@ -131,6 +135,7 @@ fun ClimateGlanceBar(
                     level = climateState.seatHeatLevel,
                     maxLevel = climateState.maxSeatHeatLevel,
                     activeColor = seatHeatTint,
+                    idleColor = colors.inactive,
                     onClick = { onClimateEvent(ClimateEvent.CycleSeatHeat) },
                 )
             }
@@ -139,7 +144,8 @@ fun ClimateGlanceBar(
                     icon = ClimateHvacIcons.FrontDefrost,
                     contentDescription = "Front defrost",
                     active = climateState.isFrontDefrostOn,
-                    activeColor = Color.White,
+                    activeColor = if (colors.light) colors.title else Color.White,
+                    idleColor = colors.inactive,
                     onClick = { onClimateEvent(ClimateEvent.ToggleFrontDefrost) },
                 )
             }
@@ -154,7 +160,7 @@ fun ClimateGlanceBar(
             ) {
                 Text(
                     text = climateState.formatTemperature(climateTemperature),
-                    color = ambient,
+                    color = accent,
                     fontSize = 42.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -167,7 +173,7 @@ fun ClimateGlanceBar(
                         }
                         if (isEmpty()) append(if (climateState.isLive) "Live" else "Climate")
                     },
-                    color = Color.White.copy(alpha = 0.5f),
+                    color = colors.muted,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Medium,
                 )
@@ -178,7 +184,8 @@ fun ClimateGlanceBar(
                     icon = ClimateHvacIcons.Ac,
                     contentDescription = "A/C",
                     active = climateState.isAcEnabled,
-                    activeColor = Color(0xFF4EA1FF),
+                    activeColor = if (colors.light) Color(0xFF1565C0) else Color(0xFF4EA1FF),
+                    idleColor = colors.inactive,
                     onClick = { onClimateEvent(ClimateEvent.ToggleAc) },
                 )
             }
@@ -186,7 +193,8 @@ fun ClimateGlanceBar(
                 CompactFanBars(
                     fanSpeed = climateState.fanSpeed,
                     maxFanSpeed = climateState.maxFanSpeed,
-                    activeColor = ambient,
+                    activeColor = accent,
+                    idleColor = colors.inactive,
                     onSpeedSelected = { onClimateEvent(ClimateEvent.SetFanSpeed(it)) },
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
@@ -198,7 +206,7 @@ fun ClimateGlanceBar(
                 Icon(
                     imageVector = Icons.Default.ExpandLess,
                     contentDescription = "Open climate",
-                    tint = Color.White.copy(alpha = 0.6f),
+                    tint = colors.muted,
                     modifier = Modifier.size(CarDesignTokens.SecondaryIcon),
                 )
             }
@@ -212,11 +220,12 @@ private fun HvacToggleControl(
     contentDescription: String,
     active: Boolean,
     activeColor: Color,
+    idleColor: Color,
     onClick: () -> Unit,
 ) {
     val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
     val tint by animateColorAsState(
-        targetValue = if (active) activeColor else Color.White.copy(alpha = 0.4f),
+        targetValue = if (active) activeColor else idleColor,
         animationSpec = effectsSpec,
         label = "hvac_toggle_tint_$contentDescription",
     )
@@ -255,12 +264,13 @@ private fun HvacLevelControl(
     level: Int,
     maxLevel: Int,
     activeColor: Color,
+    idleColor: Color,
     onClick: () -> Unit,
 ) {
     val active = level > 0
     val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Color>()
     val tint by animateColorAsState(
-        targetValue = if (active) activeColor else Color.White.copy(alpha = 0.4f),
+        targetValue = if (active) activeColor else idleColor,
         animationSpec = effectsSpec,
         label = "hvac_level_tint_$contentDescription",
     )
@@ -301,7 +311,7 @@ private fun HvacLevelControl(
                     modifier = Modifier
                         .size(width = 14.dp, height = 5.dp)
                         .clip(RoundedCornerShape(2.5.dp))
-                        .background(if (lit) tint else Color.White.copy(alpha = 0.2f)),
+                        .background(if (lit) tint else idleColor.copy(alpha = 0.35f)),
                 )
             }
         }
@@ -313,10 +323,10 @@ private fun CompactFanBars(
     fanSpeed: Int,
     maxFanSpeed: Int,
     activeColor: Color,
+    idleColor: Color,
     onSpeedSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val spatialSpec = MaterialTheme.motionScheme.defaultSpatialSpec<Float>()
     Row(
         modifier = modifier
             .height(CarDesignTokens.MinTouchTarget)
@@ -329,11 +339,6 @@ private fun CompactFanBars(
         repeat(maxFanSpeed) { index ->
             val level = index + 1
             val active = level <= fanSpeed
-            val fraction by animateFloatAsState(
-                targetValue = if (active) 1f else 0.35f,
-                animationSpec = spatialSpec,
-                label = "hvac_fan_$level",
-            )
             Box(
                 modifier = Modifier
                     .width(14.dp)
@@ -345,7 +350,7 @@ private fun CompactFanBars(
                         ),
                     )
                     .clip(RoundedCornerShape(5.dp))
-                    .background(activeColor.copy(alpha = 0.25f + fraction * 0.7f))
+                    .background(if (active) activeColor else idleColor)
                     .clickable { onSpeedSelected(level) },
             )
         }

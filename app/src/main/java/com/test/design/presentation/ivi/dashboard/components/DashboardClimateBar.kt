@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,10 +32,7 @@ import com.test.design.presentation.ivi.climate.formatTemperature
 import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
 import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
 import com.test.design.theme.CarDesignTokens
-import com.test.design.theme.ClimateCardActiveRadii
-import com.test.design.theme.ClimateCardRestRadii
 import com.test.design.theme.glassSurfaceColor
-import com.test.design.theme.rememberMorphingRoundedShape
 
 /**
  * Compact climate capsule — AAOS SystemUI already owns temp +/- and app launcher,
@@ -51,8 +49,11 @@ fun SharedTransitionScope.DashboardClimateBar(
     modifier: Modifier = Modifier,
     onOpenWidgetDashboard: (() -> Unit)? = null,
 ) {
-    val barShape = rememberMorphingRoundedShape(
-        target = if (climateState.isAcEnabled) ClimateCardActiveRadii else ClimateCardRestRadii,
+    val barShape = RoundedCornerShape(
+        topStart = 40.dp,
+        topEnd = 16.dp,
+        bottomEnd = 40.dp,
+        bottomStart = 16.dp,
     )
 
     Surface(

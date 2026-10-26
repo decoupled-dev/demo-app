@@ -1,7 +1,13 @@
 package com.test.design.presentation.ivi.vehicle.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +34,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -41,6 +50,7 @@ fun MorphingDriveModeSelector(
     selected: DriveMode,
     onSelected: (DriveMode) -> Unit,
     modifier: Modifier = Modifier,
+    embedded: Boolean = false,
 ) {
     val modes = DriveMode.entries
     val selectedIndex = modes.indexOf(selected)
@@ -50,17 +60,25 @@ fun MorphingDriveModeSelector(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text(
-            "Drive mode",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!embedded) {
+            Text(
+                "Drive mode",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(88.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f)),
+                .height(if (embedded) 76.dp else 88.dp)
+                .clip(RoundedCornerShape(28.dp))
+                .background(
+                    if (embedded) {
+                        Color.Black.copy(alpha = 0.28f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.92f)
+                    },
+                ),
         ) {
             val segmentWidth = maxWidth / modes.size
             val indicatorOffset by animateDpAsState(
@@ -76,12 +94,29 @@ fun MorphingDriveModeSelector(
                     .fillMaxHeight()
                     .padding(6.dp)
                     .clip(RoundedCornerShape(26.dp))
-                    .background(MaterialTheme.colorScheme.primary),
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.78f),
+                            ),
+                        ),
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = Color.White.copy(alpha = 0.38f),
+                        shape = RoundedCornerShape(26.dp),
+                    ),
             )
 
             Row(modifier = Modifier.fillMaxSize()) {
                 modes.forEach { mode ->
                     val isSelected = mode == selected
+                    val iconScale by animateFloatAsState(
+                        targetValue = if (isSelected) 1.12f else 0.92f,
+                        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                        label = "drive_mode_icon_${mode.name}",
+                    )
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -97,6 +132,10 @@ fun MorphingDriveModeSelector(
                             Icon(
                                 imageVector = mode.icon(),
                                 contentDescription = null,
+                                modifier = Modifier.graphicsLayer {
+                                    scaleX = iconScale
+                                    scaleY = iconScale
+                                },
                                 tint = if (isSelected) {
                                     MaterialTheme.colorScheme.onPrimary
                                 } else {
@@ -118,11 +157,20 @@ fun MorphingDriveModeSelector(
                 }
             }
         }
-        Text(
-            text = selected.subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        if (!embedded) {
+            val subtitleSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
+            AnimatedContent(
+                targetState = selected,
+                transitionSpec = { fadeIn(subtitleSpec) togetherWith fadeOut(subtitleSpec) },
+                label = "drive_mode_subtitle",
+            ) { mode ->
+                Text(
+                    text = mode.subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

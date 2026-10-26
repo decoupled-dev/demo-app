@@ -25,36 +25,32 @@ fun climateColorScheme(
 ): ColorScheme {
     val fraction = temperatureFraction.coerceIn(0f, 1f)
     val darkCanvas = base.background.luminance() < 0.5f
-    val surfaceBlend = if (darkCanvas) 0.85f else 0.28f
+    return if (darkCanvas) {
+        darkClimateColorScheme(fraction, base)
+    } else {
+        lightClimateColorScheme(fraction, base)
+    }
+}
+
+private fun darkClimateColorScheme(fraction: Float, base: ColorScheme): ColorScheme {
+    val surfaceBlend = 0.85f
     val coolSurface = Color(0xFF0D1B2A)
     val warmSurface = Color(0xFF1A0A08)
 
     return base.copy(
         primary = lerp(CoolPrimary, WarmPrimary, fraction),
-        onPrimary = if (darkCanvas) Color.White else Color(0xFF0D2A40),
-        primaryContainer = lerp(CoolContainer, WarmContainer, fraction).let {
-            if (darkCanvas) it else lerp(base.primaryContainer, it, 0.45f)
-        },
-        onPrimaryContainer = lerp(Color(0xFFB3E5FC), Color(0xFFFFCCBC), fraction).let {
-            if (darkCanvas) it else Color(0xFF1A1C1E)
-        },
+        onPrimary = Color.White,
+        primaryContainer = lerp(CoolContainer, WarmContainer, fraction),
+        onPrimaryContainer = lerp(Color(0xFFB3E5FC), Color(0xFFFFCCBC), fraction),
         inversePrimary = lerp(CoolSecondary, WarmSecondary, fraction),
         secondary = lerp(CoolSecondary, WarmSecondary, fraction),
-        onSecondary = if (darkCanvas) Color.White else Color.White,
-        secondaryContainer = lerp(Color(0xFF01579B), Color(0xFFBF360C), fraction).let {
-            if (darkCanvas) it else lerp(base.secondaryContainer, it, 0.4f)
-        },
-        onSecondaryContainer = lerp(Color(0xFFB3E5FC), Color(0xFFFFCCBC), fraction).let {
-            if (darkCanvas) it else Color(0xFF1A1C1E)
-        },
+        onSecondary = Color.White,
+        secondaryContainer = lerp(Color(0xFF01579B), Color(0xFFBF360C), fraction),
+        onSecondaryContainer = lerp(Color(0xFFB3E5FC), Color(0xFFFFCCBC), fraction),
         tertiary = lerp(CoolTertiary, WarmTertiary, fraction),
         onTertiary = Color(0xFF00363D),
-        tertiaryContainer = lerp(Color(0xFF004D5A), Color(0xFF5D2108), fraction).let {
-            if (darkCanvas) it else lerp(base.tertiaryContainer, it, 0.4f)
-        },
-        onTertiaryContainer = lerp(Color(0xFFB2EBF2), Color(0xFFFFCCBC), fraction).let {
-            if (darkCanvas) it else Color(0xFF1A1C1E)
-        },
+        tertiaryContainer = lerp(Color(0xFF004D5A), Color(0xFF5D2108), fraction),
+        onTertiaryContainer = lerp(Color(0xFFB2EBF2), Color(0xFFFFCCBC), fraction),
         surface = lerp(base.surface, lerp(coolSurface, warmSurface, fraction), surfaceBlend),
         surfaceVariant = lerp(
             base.surfaceVariant,
@@ -110,6 +106,54 @@ fun climateColorScheme(
     )
 }
 
+private val LightCoolPrimary = Color(0xFF0D47A1)
+private val LightWarmPrimary = Color(0xFFD84315)
+private val LightCoolInk = Color(0xFF014A75)
+private val LightWarmInk = Color(0xFF8C2A0A)
+private val LightCoolWash = Color(0xFFE7F4FB)
+private val LightWarmWash = Color(0xFFFFF1EB)
+
+/**
+ * Daytime climate: pastel temperature wash on light sheets, with saturated ink
+ * so dials, tracks, and active controls stay readable.
+ */
+private fun lightClimateColorScheme(fraction: Float, base: ColorScheme): ColorScheme {
+    val wash = lerp(LightCoolWash, LightWarmWash, fraction)
+    fun sheet(role: Color, amount: Float) = lerp(role, wash, amount)
+
+    return base.copy(
+        primary = lerp(LightCoolPrimary, LightWarmPrimary, fraction),
+        onPrimary = Color.White,
+        primaryContainer = lerp(Color(0xFFD7F0FA), Color(0xFFFFE3D6), fraction),
+        onPrimaryContainer = lerp(LightCoolInk, LightWarmInk, fraction),
+        inversePrimary = lerp(CoolPrimary, WarmPrimary, fraction),
+        secondary = lerp(Color(0xFF0277BD), Color(0xFFE64A19), fraction),
+        onSecondary = Color.White,
+        secondaryContainer = lerp(Color(0xFFE3F2FB), Color(0xFFFFE8E0), fraction),
+        onSecondaryContainer = lerp(Color(0xFF01579B), Color(0xFFBF360C), fraction),
+        tertiary = lerp(Color(0xFF00695C), Color(0xFFEF6C00), fraction),
+        onTertiary = Color.White,
+        tertiaryContainer = lerp(Color(0xFFD4F1F4), Color(0xFFFFE0B2), fraction),
+        onTertiaryContainer = lerp(Color(0xFF004D56), Color(0xFF8A3E00), fraction),
+        surface = sheet(Color(0xFFF7F8FA), 0.55f),
+        surfaceVariant = sheet(Color(0xFFE6EAEF), 0.35f),
+        surfaceTint = lerp(LightCoolPrimary, LightWarmPrimary, fraction),
+        outline = lerp(base.outline, lerp(Color(0xFF5C7A8A), Color(0xFF8A5A48), fraction), 0.28f),
+        outlineVariant = lerp(
+            base.outlineVariant,
+            lerp(Color(0xFFC5D5DE), Color(0xFFE6CABB), fraction),
+            0.4f,
+        ),
+        surfaceBright = sheet(Color.White, 0.2f),
+        surfaceDim = sheet(Color(0xFFE8EBEE), 0.3f),
+        surfaceContainer = sheet(Color(0xFFF3F5F7), 0.4f),
+        surfaceContainerHigh = sheet(Color.White, 0.38f),
+        surfaceContainerHighest = sheet(Color(0xFFE4E8EE), 0.32f),
+        surfaceContainerLow = sheet(Color(0xFFF7F8FA), 0.62f),
+        surfaceContainerLowest = sheet(Color.White, 0.16f),
+    )
+}
+
 fun temperatureToFraction(celsius: Float, min: Float = 16f, max: Float = 30f): Float {
     val span = (max - min).takeIf { it > 0f } ?: return 0f
     return ((celsius - min) / span).coerceIn(0f, 1f)
@@ -135,6 +179,38 @@ fun zoneCoolIntensity(ownFraction: Float, otherFraction: Float): Float {
 /** Ambient glow / pill fill for a single zone temperature. */
 fun climateAmbientColor(temperatureFraction: Float): Color =
     lerp(CoolPrimary, WarmPrimary, temperatureFraction.coerceIn(0f, 1f))
+
+/** Temperature wash behind a dial. Light canvases stay pastel; dark canvases stay deep. */
+fun climateDialFill(temperatureFraction: Float, lightCanvas: Boolean): Color {
+    val fraction = temperatureFraction.coerceIn(0f, 1f)
+    return if (lightCanvas) {
+        lerp(Color(0xFFE3F2FB), Color(0xFFFFE8E0), fraction)
+    } else {
+        climatePillContainer(fraction)
+    }
+}
+
+/**
+ * Readable temperature accent. Neon glow on a dark card, deep ink on a light card.
+ */
+fun climateContentAccent(temperatureFraction: Float, lightCanvas: Boolean): Color {
+    val fraction = temperatureFraction.coerceIn(0f, 1f)
+    return if (lightCanvas) {
+        lerp(Color(0xFF01579B), Color(0xFFBF360C), fraction)
+    } else {
+        climateAmbientColor(fraction)
+    }
+}
+
+/** Numerals on a temperature dial. */
+fun climateDialInk(temperatureFraction: Float, lightCanvas: Boolean): Color {
+    val fraction = temperatureFraction.coerceIn(0f, 1f)
+    return if (lightCanvas) {
+        climateContentAccent(fraction, lightCanvas = true)
+    } else {
+        climateOnPill(fraction)
+    }
+}
 
 fun climatePillContainer(temperatureFraction: Float): Color =
     lerp(CoolContainer, WarmContainer, temperatureFraction.coerceIn(0f, 1f))

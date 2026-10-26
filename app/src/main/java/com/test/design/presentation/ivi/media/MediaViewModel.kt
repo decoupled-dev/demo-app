@@ -1,42 +1,23 @@
 package com.test.design.presentation.ivi.media
 
-import com.test.design.core.mvi.MviViewModel
+import android.app.Application
+import android.content.Context
+import androidx.lifecycle.AndroidViewModel
+import com.test.design.data.media.MediaPlaybackRepository
+import kotlinx.coroutines.flow.StateFlow
 
-class MediaViewModel : MviViewModel<MediaUiState, MediaEvent>(MediaUiState()) {
+/**
+ * Now-playing shared with the car launcher media widget.
+ * [MediaPlaybackRepository] reads CarMediaManager's active playback source.
+ */
+class MediaViewModel(
+    application: Application,
+) : AndroidViewModel(application) {
+    private val playback = MediaPlaybackRepository.get(application)
+    val state: StateFlow<MediaUiState> = playback.state
 
-    override fun onEvent(event: MediaEvent) {
-        when (event) {
-            MediaEvent.TogglePlayback -> setState { copy(isPlaying = !isPlaying) }
-            MediaEvent.ToggleQueue -> setState { copy(isQueueVisible = !isQueueVisible) }
-            MediaEvent.ToggleShuffle -> setState { copy(isShuffleOn = !isShuffleOn) }
-            MediaEvent.CycleRepeat -> setState {
-                val next = when (repeatMode) {
-                    RepeatMode.Off -> RepeatMode.All
-                    RepeatMode.All -> RepeatMode.One
-                    RepeatMode.One -> RepeatMode.Off
-                }
-                copy(repeatMode = next)
-            }
-            is MediaEvent.SelectSource -> setState { copy(source = event.source) }
-            MediaEvent.NextTrack -> setState {
-                val index = queue.indexOfFirst { it.id == currentTrack.id }
-                val next = queue.getOrNull((index + 1).coerceAtMost(queue.lastIndex)) ?: currentTrack
-                copy(currentTrack = next, isPlaying = true, progress = 0f, elapsedLabel = "0:00")
-            }
-            MediaEvent.PreviousTrack -> setState {
-                val index = queue.indexOfFirst { it.id == currentTrack.id }
-                val previous = queue.getOrNull((index - 1).coerceAtLeast(0)) ?: currentTrack
-                copy(currentTrack = previous, isPlaying = true, progress = 0f, elapsedLabel = "0:00")
-            }
-            is MediaEvent.SelectTrack -> setState {
-                copy(
-                    currentTrack = event.track,
-                    isPlaying = true,
-                    progress = 0f,
-                    elapsedLabel = "0:00",
-                    isQueueVisible = false,
-                )
-            }
-        }
-    }
+    fun onEvent(event: MediaEvent) = playback.onEvent(event)
+
+    /** Opens Spotify, Media App, Media Center, or whichever source is playing. */
+    fun openActiveSource(context: Context) = playback.openActiveSource(context)
 }

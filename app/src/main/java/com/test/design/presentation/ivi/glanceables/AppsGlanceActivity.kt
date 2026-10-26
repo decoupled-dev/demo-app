@@ -94,11 +94,14 @@ fun AppsGlance(
     val gap = 14.dp
     val pad = 18.dp
 
+    val colors = glancePalette()
+    val shape = RoundedCornerShape(20.dp)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = GlanceCardBg,
-        shadowElevation = 10.dp,
+        shape = shape,
+        color = colors.card,
+        border = colors.cardBorder(),
+        shadowElevation = if (colors.light) 2.dp else 10.dp,
     ) {
         BoxWithConstraints(
             modifier = Modifier

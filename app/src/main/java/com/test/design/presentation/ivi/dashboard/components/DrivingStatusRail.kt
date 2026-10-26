@@ -26,34 +26,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
 import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
 import com.test.design.presentation.ivi.navigation.NavigationUiState
-import com.test.design.presentation.ivi.vehicle.DriveMode
 import com.test.design.presentation.ivi.vehicle.VehicleUiState
 import com.test.design.theme.CarDesignTokens
 import com.test.design.theme.ExpressiveShapes
-import com.test.design.theme.MorphingCornerRadii
 import com.test.design.theme.glassPanelColor
 import com.test.design.theme.navigationGlassPanelColor
-import com.test.design.theme.rememberMorphingRoundedShape
 
-private val RailCardRadii = MorphingCornerRadii(
+private val RailCardShape = RoundedCornerShape(
     topStart = 28.dp,
     topEnd = 14.dp,
     bottomEnd = 28.dp,
     bottomStart = 14.dp,
-)
-
-private val RailCardActiveRadii = MorphingCornerRadii(
-    topStart = 36.dp,
-    topEnd = 16.dp,
-    bottomEnd = 36.dp,
-    bottomStart = 16.dp,
 )
 
 /**
@@ -73,13 +63,6 @@ fun SharedTransitionScope.DrivingStatusRail(
     gear: String = "D",
 ) {
     val effectsSpec = MaterialTheme.motionScheme.defaultEffectsSpec<Float>()
-    val vehicleShape = rememberMorphingRoundedShape(
-        target = if (vehicleState.isCharging || vehicleState.driveMode == DriveMode.Sport) {
-            RailCardActiveRadii
-        } else {
-            RailCardRadii
-        },
-    )
 
     Surface(
         modifier = modifier
@@ -100,11 +83,10 @@ fun SharedTransitionScope.DrivingStatusRail(
                 speedMph = speedMph,
                 gear = gear,
                 batteryPercent = vehicleState.batteryPercent,
-                rangeMiles = vehicleState.rangeMiles,
+                rangeLabel = vehicleState.rangeLabel,
                 driveMode = vehicleState.driveMode.label,
                 isCharging = vehicleState.isCharging,
                 onVehicleClick = onVehicleClick,
-                vehicleShape = vehicleShape,
                 animatedVisibilityScope = animatedVisibilityScope,
             )
 
@@ -202,11 +184,10 @@ private fun SharedTransitionScope.SpeedGearHeader(
     speedMph: Int,
     gear: String,
     batteryPercent: Int,
-    rangeMiles: Int,
+    rangeLabel: String,
     driveMode: String,
     isCharging: Boolean,
     onVehicleClick: () -> Unit,
-    vehicleShape: Shape,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     Column(
@@ -239,7 +220,7 @@ private fun SharedTransitionScope.SpeedGearHeader(
                 widget = DashboardWidget.Vehicle,
                 animatedVisibilityScope = animatedVisibilityScope,
             ),
-            shape = vehicleShape,
+            shape = RailCardShape,
             color = glassPanelColor(),
         ) {
             Row(
@@ -260,7 +241,7 @@ private fun SharedTransitionScope.SpeedGearHeader(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    text = "$batteryPercent% · $rangeMiles mi",
+                    text = "$batteryPercent% · $rangeLabel",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.weight(1f),

@@ -31,7 +31,7 @@ Use the [`motion.md`](../motion.md) presentation script.
 
 ### 4. IVI feature surfaces (simulated is fine if labeled)
 
-- Climate, Media, Nav (Google Maps + demo route), Vehicle energy modes, Glanceables
+- Climate, Media, Nav (OpenStreetMap via MapLibre + demo route), Vehicle energy modes, Glanceables
 
 ### 5. AAOS app model
 

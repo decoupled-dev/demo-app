@@ -1,5 +1,7 @@
 package com.test.design.presentation.ivi.media
 
+import android.graphics.Bitmap
+
 enum class MediaSource(val label: String) {
     Bluetooth("Bluetooth"),
     Radio("Radio"),
@@ -42,7 +44,26 @@ data class MediaUiState(
     val isShuffleOn: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.Off,
     val source: MediaSource = MediaSource.Bluetooth,
+    /** True when now-playing comes from CarMediaManager's active playback source. */
+    val isLive: Boolean = false,
+    /** Application label of the active media source, matching the car launcher widget. */
+    val sourceLabel: String = "",
+    /**
+     * Active playback source from CarMediaManager.
+     * A flattened component (`package/class`) when the platform names one, otherwise the
+     * playing session's package name.
+     */
+    val sourceComponent: String = "",
+    val artwork: Bitmap? = null,
 )
+
+/** Artist line, with the active source name when the session is live. */
+fun MediaUiState.nowPlayingSubtitle(): String = when {
+    isLive && sourceLabel.isNotBlank() && currentTrack.artist.isNotBlank() ->
+        "${currentTrack.artist} · $sourceLabel"
+    isLive && sourceLabel.isNotBlank() -> sourceLabel
+    else -> currentTrack.artist
+}
 
 sealed interface MediaEvent {
     data object TogglePlayback : MediaEvent

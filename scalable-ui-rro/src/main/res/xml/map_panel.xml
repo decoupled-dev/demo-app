@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Full-bleed stock AAOS MapsPlaceholderActivity (green) under floating rail.
-  Design MapActivity / Google Maps is not used as the map_panel host.
+  Design MapActivity is not used as the map_panel host.
 -->
 <TaskPanel
     id="map_panel"

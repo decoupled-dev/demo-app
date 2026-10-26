@@ -66,7 +66,7 @@ import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
 import com.test.design.presentation.ivi.media.components.MediaTransportControlsBar
 import com.test.design.presentation.ivi.navigation.components.DefaultMapCenter
-import com.test.design.presentation.ivi.navigation.components.GoogleMapBackground
+import com.test.design.presentation.ivi.navigation.components.OpenMapBackground
 import com.test.design.presentation.ivi.navigation.components.mapChromeLayer
 import com.test.design.theme.CarDesignTokens
 
@@ -130,7 +130,7 @@ fun SharedTransitionScope.AdaptiveSpaceScreen(
                 ),
             ),
     ) {
-        GoogleMapBackground(
+        OpenMapBackground(
             center = DefaultMapCenter,
             zoom = 15.0,
             showRoute = true,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -37,7 +38,9 @@ import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
 import com.test.design.presentation.ivi.dashboard.widgetControlsSharedElement
 import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
+import com.test.design.presentation.ivi.media.components.MediaArtInitials
 import com.test.design.presentation.ivi.media.components.MediaTransportControlsBar
+import com.test.design.presentation.ivi.media.nowPlayingSubtitle
 
 /**
  * Full-width Tesla-style media bar across the map bottom.
@@ -86,11 +89,11 @@ fun SharedTransitionScope.DashboardMediaDock(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = mediaState.currentTrack.album.take(2).uppercase(),
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold,
+                MediaArtInitials(
+                    album = mediaState.currentTrack.album,
+                    artwork = mediaState.artwork,
+                    labelSize = 16.sp,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
 
@@ -107,7 +110,11 @@ fun SharedTransitionScope.DashboardMediaDock(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "${mediaState.currentTrack.artist}  ·  ${mediaState.currentTrack.album}",
+                    text = if (mediaState.isLive) {
+                        mediaState.nowPlayingSubtitle()
+                    } else {
+                        "${mediaState.currentTrack.artist}  ·  ${mediaState.currentTrack.album}"
+                    },
                     color = Color.White.copy(alpha = 0.55f),
                     fontSize = 13.sp,
                     maxLines = 1,

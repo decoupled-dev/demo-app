@@ -7,6 +7,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -28,9 +29,12 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.test.design.presentation.ivi.climate.TemperatureUnit
+import com.test.design.presentation.ivi.climate.temperatureScaleLabelFits
 import com.test.design.presentation.ivi.climate.rememberClimateHaptics
 import com.test.design.presentation.ivi.climate.temperatureScaleDragSteps
 import com.test.design.presentation.ivi.climate.temperatureScaleEdgeFade
@@ -95,6 +99,9 @@ fun TemperatureScale(
     temperatureUnit: TemperatureUnit,
     onTemperatureSteps: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    canvasHeight: Dp = 100.dp,
+    readoutFontSize: TextUnit = 44.sp,
+    readoutLineHeight: TextUnit = 52.sp,
 ) {
     val step = temperatureScaleSegmentStep(temperatureUnit, temperatureStepCelsius)
     val tickCount = temperatureScaleIndex(maxTemperature, minTemperature, step).coerceAtLeast(0)
@@ -122,11 +129,15 @@ fun TemperatureScale(
         label = "temperature_scale_shift",
     )
     val tickColor = MaterialTheme.colorScheme.primary
+    val labelFont = (canvasHeight.value * 0.2f).coerceIn(14f, 20f).sp
     val labelStyle = MaterialTheme.typography.labelLarge.copy(
-        fontSize = 20.sp,
-        lineHeight = 24.sp,
+        fontSize = labelFont,
+        lineHeight = (labelFont.value * 1.2f).sp,
     )
-    val readoutStyle = MaterialTheme.typography.displayMedium
+    val readoutStyle = MaterialTheme.typography.displayMedium.copy(
+        fontSize = readoutFontSize,
+        lineHeight = readoutLineHeight,
+    )
     val textMeasurer = rememberTextMeasurer()
 
     Column(
@@ -164,15 +175,32 @@ fun TemperatureScale(
         Canvas(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(100.dp),
+                .height(canvasHeight),
         ) {
             val shift = shownShift
             val center = size.width / 2f
             val halfWidth = (size.width / 2f).coerceAtLeast(1f)
-            val labelGap = 2.dp.toPx()
-            val maxLen = MaxTickLength.toPx()
-            val baseline = 36.dp.toPx() + maxLen
+            val labelClearance = 8.dp.toPx()
+            val sampleLabel = textMeasurer.measure(
+                text = "88",
+                style = labelStyle.merge(TextStyle(textAlign = TextAlign.Center)),
+            )
+            val labelHeight = sampleLabel.size.height.toFloat()
+            val pointerGap = 6.dp.toPx()
+            val pointerHeight = 14.dp.toPx()
+            var maxLen = MaxTickLength.toPx().coerceAtMost(size.height * 0.28f)
+            var baseline = size.height - 2.dp.toPx() - pointerHeight - pointerGap
+            var labelTop = baseline - maxLen - labelClearance - labelHeight
+            if (labelTop < 0f) {
+                maxLen = (maxLen + labelTop).coerceAtLeast(maxLen * 0.55f)
+                labelTop = baseline - maxLen - labelClearance - labelHeight
+                if (labelTop < 0f) {
+                    baseline -= labelTop
+                    labelTop = 0f
+                }
+            }
             val stroke = 2.dp.toPx()
+            var lastLabelRight = Float.NEGATIVE_INFINITY
             for (index in 0..tickCount) {
                 val x = center + (index - animatedIndex) * spacingPx + shift
                 if (x < -TickSpacing.toPx() || x > size.width + TickSpacing.toPx()) continue
@@ -237,15 +265,26 @@ fun TemperatureScale(
                         text = label,
                         style = labelStyle.merge(TextStyle(textAlign = TextAlign.Center)),
                     )
-                    drawText(
-                        textLayoutResult = layout,
-                        color = markColor.copy(alpha = alpha),
-                        topLeft = Offset(x - layout.size.width / 2f, baseline - maxLen - layout.size.height - labelGap),
-                    )
+                    val labelWidth = layout.size.width.toFloat()
+                    if (
+                        temperatureScaleLabelFits(
+                            centerPx = x,
+                            labelWidthPx = labelWidth,
+                            previousRightPx = lastLabelRight,
+                            gapPx = labelClearance,
+                        )
+                    ) {
+                        drawText(
+                            textLayoutResult = layout,
+                            color = markColor.copy(alpha = alpha),
+                            topLeft = Offset(x - labelWidth / 2f, labelTop),
+                        )
+                        lastLabelRight = x + labelWidth / 2f
+                    }
                 }
             }
-            val apexY = baseline + 8.dp.toPx()
-            val baseY = apexY + 14.dp.toPx()
+            val apexY = baseline + pointerGap
+            val baseY = apexY + pointerHeight
             val half = 11.dp.toPx()
             drawPath(
                 path = roundedTriangle(
@@ -262,6 +301,7 @@ fun TemperatureScale(
             color = MaterialTheme.colorScheme.onPrimaryContainer,
             sortKey = sortKey,
             textStyle = readoutStyle,
+            modifier = Modifier.padding(top = 4.dp),
         )
     }
 }

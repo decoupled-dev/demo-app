@@ -14,7 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.test.design.presentation.ivi.vehicle.VehicleScreen
 import com.test.design.presentation.ivi.vehicle.VehicleViewModel
 
-/** Standalone full vehicle info screen — launch via [ACTION_OPEN_VEHICLE] or component name. */
+/** Standalone full vehicle info screen — app launcher, [ACTION_OPEN_VEHICLE], or component name. */
 class VehiclePanelActivity : StandalonePanelActivity() {
 
     private val vehicleViewModel: VehicleViewModel by viewModels()

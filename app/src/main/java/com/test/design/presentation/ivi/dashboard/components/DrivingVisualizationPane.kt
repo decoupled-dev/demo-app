@@ -84,7 +84,7 @@ fun SharedTransitionScope.DrivingVisualizationPane(
                 speedMph = speedMph,
                 gear = gear,
                 batteryPercent = vehicleState.batteryPercent,
-                rangeMiles = vehicleState.rangeMiles,
+                rangeLabel = vehicleState.rangeLabel,
             )
 
             Box(
@@ -106,7 +106,7 @@ private fun DrivingVizHeader(
     speedMph: Int,
     gear: String,
     batteryPercent: Int,
-    rangeMiles: Int,
+    rangeLabel: String,
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -172,7 +172,7 @@ private fun DrivingVizHeader(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    text = "$rangeMiles mi",
+                    text = rangeLabel,
                     color = Color.White.copy(alpha = 0.9f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,

@@ -27,18 +27,39 @@ data class VehicleSystemMetric(
     val health: SystemHealth,
 )
 
+data class TireReading(
+    val id: String,
+    val shortLabel: String,
+    val label: String,
+    val pressureLabel: String,
+    val kiloPascals: Float,
+    val criticallyLow: Boolean,
+)
+
 data class VehicleUiState(
     val batteryPercent: Int = 82,
     val rangeMiles: Int = 240,
+    val rangeLabel: String = "240 mi",
     val driveMode: DriveMode = DriveMode.Comfort,
     val efficiencyMpkWh: Float = 3.8f,
     val odometerMiles: Int = 18420,
+    val odometerLabel: String? = null,
     val tripEnergyKwh: Float = 12.4f,
     val isCharging: Boolean = false,
     val chargeRateKw: Float = 11f,
     val regenLevel: RegenLevel = RegenLevel.Standard,
     val systems: List<VehicleSystemMetric> = defaultSystems(),
     val selectedSystemId: String? = null,
+    val isLive: Boolean = false,
+    val energyLabel: String = "Energy",
+    val speedLabel: String? = null,
+    val gearLabel: String? = null,
+    val outsideTempLabel: String? = null,
+    val parkingBrakeLabel: String? = null,
+    val chargePortLabel: String? = null,
+    val tires: List<TireReading> = emptyList(),
+    val tiresAvailable: Boolean = false,
+    val packCapacityKwh: Float? = null,
 )
 
 sealed interface VehicleEvent {

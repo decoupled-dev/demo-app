@@ -33,7 +33,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
 import com.test.design.presentation.ivi.media.MediaViewModel
+import com.test.design.presentation.ivi.media.components.MediaArtInitials
 import com.test.design.presentation.ivi.media.components.MediaTransportControlsBar
+import com.test.design.presentation.ivi.media.nowPlayingSubtitle
 
 /** Scalable UI `media_glance` TaskPanel. */
 class MediaGlanceActivity : GlanceableActivity() {
@@ -59,11 +61,14 @@ fun MediaGlance(
     onMediaEvent: (MediaEvent) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val colors = glancePalette()
+    val shape = RoundedCornerShape(20.dp)
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
-        color = GlanceCardBg,
-        shadowElevation = 10.dp,
+        shape = shape,
+        color = colors.card,
+        border = colors.cardBorder(),
+        shadowElevation = if (colors.light) 2.dp else 10.dp,
     ) {
         Column(
             modifier = Modifier
@@ -87,25 +92,24 @@ fun MediaGlance(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = mediaState.currentTrack.album.take(2).uppercase(),
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                    MediaArtInitials(
+                        album = mediaState.currentTrack.album,
+                        artwork = mediaState.artwork,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = mediaState.currentTrack.title,
-                        color = Color.White,
+                        color = colors.title,
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = mediaState.currentTrack.artist,
-                        color = Color.White.copy(alpha = 0.55f),
+                        text = mediaState.nowPlayingSubtitle(),
+                        color = colors.muted,
                         fontSize = 16.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -126,8 +130,8 @@ fun MediaGlance(
                         .fillMaxWidth()
                         .height(5.dp)
                         .clip(RoundedCornerShape(3.dp)),
-                    color = Color(0xFFF5C542),
-                    trackColor = Color.White.copy(alpha = 0.15f),
+                    color = if (colors.light) Color(0xFF1565C0) else Color(0xFFF5C542),
+                    trackColor = colors.track,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -135,12 +139,12 @@ fun MediaGlance(
                 ) {
                     Text(
                         text = mediaState.elapsedLabel,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = colors.muted,
                         fontSize = 14.sp,
                     )
                     Text(
                         text = mediaState.currentTrack.durationLabel,
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = colors.muted,
                         fontSize = 14.sp,
                     )
                 }

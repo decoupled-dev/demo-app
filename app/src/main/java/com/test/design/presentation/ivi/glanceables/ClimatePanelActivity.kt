@@ -14,7 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.test.design.presentation.ivi.climate.ClimateControlScreen
 import com.test.design.presentation.ivi.climate.ClimateViewModel
 
-/** Standalone full climate screen — launch via [ACTION_OPEN_CLIMATE] or component name. */
+/** Standalone full climate screen — app launcher, [ACTION_OPEN_CLIMATE], or component name. */
 class ClimatePanelActivity : StandalonePanelActivity() {
 
     private val climateViewModel: ClimateViewModel by viewModels()

@@ -18,7 +18,12 @@ fun DashboardWidget.liveStatus(
     DashboardWidget.DualZone -> "Driver restricted · Passenger full UI"
     DashboardWidget.Media -> mediaState?.let { state ->
         val play = if (state.isPlaying) "Playing" else "Paused"
-        "Simulated · $play · ${state.currentTrack.title}"
+        val source = if (state.isLive) {
+            state.sourceLabel.ifBlank { "Live" }
+        } else {
+            "Simulated"
+        }
+        "$source · $play · ${state.currentTrack.title}"
     } ?: subtitle
     DashboardWidget.Climate -> climateState?.let { state ->
         val temp = climateTemperature ?: state.temperatureCelsius
@@ -41,8 +46,9 @@ fun DashboardWidget.liveStatus(
         "Simulated · ${state.destination} · ${state.etaMinutes} min · ${state.distanceRemaining}"
     } ?: subtitle
     DashboardWidget.Vehicle -> vehicleState?.let { state ->
+        val source = if (state.isLive) "Live" else "Simulated"
         val charge = if (state.isCharging) "Charging" else state.driveMode.label
-        "Simulated · ${state.batteryPercent}% · ${state.rangeMiles} mi · $charge"
+        "$source · ${state.batteryPercent}% · ${state.rangeLabel} · $charge"
     } ?: subtitle
     DashboardWidget.VirtualAssistant -> "Eyes · STT · TTS lip-sync · cluster hand-off"
     DashboardWidget.AssistantGallery -> "Chrome styles · moods · opaque stage · auto-cycle"

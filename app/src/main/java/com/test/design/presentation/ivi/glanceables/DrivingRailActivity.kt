@@ -56,7 +56,7 @@ class DrivingRailActivity : GlanceableActivity() {
                     speedLimitMph = cluster.speedLimitMph,
                     gear = cluster.gear,
                     batteryPercent = vehicleState.batteryPercent,
-                    rangeMiles = vehicleState.rangeMiles,
+                    rangeLabel = vehicleState.rangeLabel,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 MediaGlance(

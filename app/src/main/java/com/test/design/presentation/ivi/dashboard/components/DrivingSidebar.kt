@@ -47,7 +47,9 @@ import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
 import com.test.design.presentation.ivi.dashboard.widgetControlsSharedElement
 import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
+import com.test.design.presentation.ivi.media.components.MediaArtInitials
 import com.test.design.presentation.ivi.media.components.MediaTransportControlsBar
+import com.test.design.presentation.ivi.media.nowPlayingSubtitle
 import com.test.design.presentation.ivi.vehicle.VehicleUiState
 
 private val CardBg = Color(0xF01C1C1E)
@@ -85,7 +87,7 @@ fun SharedTransitionScope.DrivingSidebar(
             speedLimitMph = speedLimitMph,
             gear = gear,
             batteryPercent = vehicleState.batteryPercent,
-            rangeMiles = vehicleState.rangeMiles,
+            rangeLabel = vehicleState.rangeLabel,
             onClick = onVehicleClick,
             animatedVisibilityScope = animatedVisibilityScope,
             modifier = Modifier.fillMaxWidth(),
@@ -116,7 +118,7 @@ private fun SharedTransitionScope.DrivingStatsCard(
     speedLimitMph: Int,
     gear: String,
     batteryPercent: Int,
-    rangeMiles: Int,
+    rangeLabel: String,
     onClick: () -> Unit,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
@@ -168,7 +170,7 @@ private fun SharedTransitionScope.DrivingStatsCard(
                     trackColor = Color.White.copy(alpha = 0.12f),
                 )
                 Text(
-                    text = "$rangeMiles miles",
+                    text = rangeLabel,
                     color = Color.White.copy(alpha = 0.85f),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -270,11 +272,10 @@ private fun SharedTransitionScope.SidebarMediaCard(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = mediaState.currentTrack.album.take(2).uppercase(),
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
+                    MediaArtInitials(
+                        album = mediaState.currentTrack.album,
+                        artwork = mediaState.artwork,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
@@ -287,7 +288,7 @@ private fun SharedTransitionScope.SidebarMediaCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = mediaState.currentTrack.artist,
+                        text = mediaState.nowPlayingSubtitle(),
                         color = Color.White.copy(alpha = 0.55f),
                         fontSize = 16.sp,
                         maxLines = 1,

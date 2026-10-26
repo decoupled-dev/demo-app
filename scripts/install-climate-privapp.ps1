@@ -1,4 +1,5 @@
-# Install com.test.design as a privileged system app so CONTROL_CAR_CLIMATE is granted.
+# Install com.test.design as a privileged system app so CONTROL_CAR_CLIMATE
+# and MEDIA_CONTENT_CONTROL (active car media source) are granted.
 # Requires: rooted userdebug device, adb remount, platform-signed APK (AOSP keys).
 #
 # Usage (from repo root, after assembleDebug):
@@ -62,4 +63,4 @@ adb shell "chmod 644 /system/priv-app/Design/Design.apk /system/etc/permissions/
 Write-Host "Rebooting (normal Android boot)..."
 adb reboot
 Write-Host "Done. After boot, confirm with:"
-Write-Host "  adb shell dumpsys package com.test.design | findstr CONTROL_CAR_CLIMATE"
+Write-Host "  adb shell dumpsys package com.test.design | findstr MEDIA_CONTENT_CONTROL"

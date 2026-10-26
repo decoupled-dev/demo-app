@@ -295,14 +295,6 @@ private fun SharedTransitionScope.DashboardHubContent(
                     onClick = { onEvent(DashboardEvent.WidgetTapped(widget)) },
                     animatedVisibilityScope = animatedVisibilityScope,
                     modifier = widgetModifier,
-                    morphExpanded = when (widget) {
-                        DashboardWidget.Climate -> climateState.isAcEnabled
-                        DashboardWidget.Media -> mediaState.isPlaying
-                        DashboardWidget.Vehicle -> vehicleState.driveMode ==
-                            com.test.design.presentation.ivi.vehicle.DriveMode.Sport ||
-                            vehicleState.isCharging
-                        else -> false
-                    },
                     mediaState = mediaState,
                     onMediaEvent = onMediaEvent,
                     climateState = climateState,

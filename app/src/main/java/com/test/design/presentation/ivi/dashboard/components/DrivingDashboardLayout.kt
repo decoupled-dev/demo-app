@@ -55,7 +55,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
-import com.google.android.gms.maps.model.LatLng
 import com.test.design.core.LocalDrivingUxState
 import com.test.design.core.cluster.ClusterUiState
 import com.test.design.presentation.ivi.climate.ClimateEvent
@@ -63,13 +62,14 @@ import com.test.design.presentation.ivi.climate.ClimateUiState
 import com.test.design.presentation.ivi.climate.components.ClimateHvacIcons
 import com.test.design.presentation.ivi.climate.formatTemperature
 import com.test.design.presentation.ivi.dashboard.DashboardEvent
-import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
 import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
+import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
 import com.test.design.presentation.ivi.media.MediaEvent
 import com.test.design.presentation.ivi.media.MediaUiState
 import com.test.design.presentation.ivi.navigation.NavigationUiState
 import com.test.design.presentation.ivi.navigation.components.DefaultMapCenter
-import com.test.design.presentation.ivi.navigation.components.GoogleMapBackground
+import com.test.design.presentation.ivi.navigation.components.MapCoordinate
+import com.test.design.presentation.ivi.navigation.components.OpenMapBackground
 import com.test.design.presentation.ivi.navigation.components.mapChromeLayer
 import com.test.design.presentation.ivi.vehicle.VehicleUiState
 import com.test.design.theme.CarDesignTokens
@@ -115,9 +115,10 @@ fun SharedTransitionScope.DrivingDashboardLayout(
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     onOpenWidgetDashboard: (() -> Unit)? = null,
-    mapCenter: LatLng? = null,
+    mapCenter: MapCoordinate? = null,
     initialMapZoom: Double = 14.5,
     showMapRoute: Boolean = false,
+    embedMap: Boolean = true,
     @Suppress("UNUSED_PARAMETER") onOpenMain: (() -> Unit)? = null,
 ) {
     val widgetsReveal = rememberWidgetsReveal(initial = 1f)
@@ -127,14 +128,17 @@ fun SharedTransitionScope.DrivingDashboardLayout(
 
     Box(modifier = modifier.fillMaxSize()) {
         // Map stays full-bleed; SafeBounds / system bars pad overlays only.
-        // mapChromeLayer() keeps Compose chrome above the Maps SDK AndroidView.
-        GoogleMapBackground(
-            modifier = Modifier.fillMaxSize(),
-            center = mapCenter ?: DefaultMapCenter,
-            showRoute = showMapRoute,
-            interactive = true,
-            zoom = initialMapZoom,
-        )
+        // mapChromeLayer() keeps Compose chrome above the map texture view.
+        // Driving home can hoist one map so back from search does not recreate it.
+        if (embedMap) {
+            OpenMapBackground(
+                modifier = Modifier.fillMaxSize(),
+                center = mapCenter ?: DefaultMapCenter,
+                showRoute = showMapRoute,
+                interactive = true,
+                zoom = initialMapZoom,
+            )
+        }
 
         BoxWithConstraints(
             modifier = Modifier
@@ -205,7 +209,6 @@ fun SharedTransitionScope.DrivingDashboardLayout(
 
             MapSearchBar(
                 onClick = { onEvent(DashboardEvent.WidgetTapped(DashboardWidget.Navigation)) },
-                animatedVisibilityScope = animatedVisibilityScope,
                 modifier = Modifier
                     .align(Alignment.TopStart)
                     .fillMaxWidth()
@@ -235,21 +238,14 @@ fun SharedTransitionScope.DrivingDashboardLayout(
     }
 }
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-private fun SharedTransitionScope.MapSearchBar(
+private fun MapSearchBar(
     onClick: () -> Unit,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
     Surface(
         onClick = onClick,
-        modifier = widgetContainerTransform(
-            widget = DashboardWidget.Navigation,
-            animatedVisibilityScope = animatedVisibilityScope,
-            modifier = modifier,
-            clipShape = MapSearchShape,
-        ),
+        modifier = modifier,
         shape = MapSearchShape,
         color = Color(0xF01C1C1E),
         shadowElevation = 10.dp,

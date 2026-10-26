@@ -179,13 +179,23 @@ private fun SharedTransitionScope.MediaNowPlayingPanel(
             widget = DashboardWidget.Media,
             onBack = onBack,
             animatedVisibilityScope = animatedVisibilityScope,
-            trailingContent = { SimulatedBadge() },
+            trailingContent = {
+                SimulatedBadge(label = if (uiState.isLive) "Live" else "Simulated")
+            },
         )
 
-        MediaSourceChips(
-            selected = uiState.source,
-            onSelected = { onEvent(MediaEvent.SelectSource(it)) },
-        )
+        if (uiState.isLive) {
+            Text(
+                text = uiState.sourceLabel.ifBlank { "Active source" },
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            MediaSourceChips(
+                selected = uiState.source,
+                onSelected = { onEvent(MediaEvent.SelectSource(it)) },
+            )
+        }
 
         AdaptiveSplit(
             layout = layout,
@@ -203,6 +213,7 @@ private fun SharedTransitionScope.MediaNowPlayingPanel(
                 MediaAlbumArt(
                     album = uiState.currentTrack.album,
                     albumShape = albumShape,
+                    artwork = uiState.artwork,
                     modifier = paneModifier.sharedElement(
                         rememberSharedContentState(key = "album_art"),
                         animatedVisibilityScope = animatedVisibilityScope,
@@ -218,6 +229,7 @@ private fun SharedTransitionScope.MediaNowPlayingPanel(
                 ) {
                     AnimatedTrackInfo(
                         track = uiState.currentTrack,
+                        subtitle = uiState.nowPlayingSubtitle(),
                         modifier = widgetContentSharedElement(
                             widget = DashboardWidget.Media,
                             animatedVisibilityScope = animatedVisibilityScope,

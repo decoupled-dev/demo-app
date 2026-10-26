@@ -7,6 +7,10 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -17,6 +21,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.test.design.presentation.activityViewModel
@@ -39,6 +44,9 @@ import com.test.design.presentation.ivi.media.MediaPlayerScreen
 import com.test.design.presentation.ivi.media.MediaViewModel
 import com.test.design.presentation.ivi.navigation.NavigationScreen
 import com.test.design.presentation.ivi.navigation.NavigationViewModel
+import com.test.design.presentation.ivi.navigation.components.DefaultMapCenter
+import com.test.design.presentation.ivi.navigation.components.OpenMapBackground
+import com.test.design.presentation.ivi.navigation.components.mapChromeLayer
 import com.test.design.presentation.ivi.vehicle.VehicleScreen
 import com.test.design.presentation.ivi.vehicle.VehicleViewModel
 import com.test.design.presentation.material.CustomizedMaterialComponentsScreen
@@ -112,14 +120,43 @@ fun DrivingHomeScreen(
             }
         }
 
-        SharedTransitionLayout(modifier = modifier.fillMaxSize()) {
+        Box(modifier = modifier.fillMaxSize()) {
+            // Keep the map outside the shared-element overlay so that morph
+            // does not flatten the texture view to black.
+            OpenMapBackground(
+                modifier = Modifier.fillMaxSize(),
+                center = mapLaunchConfig.center ?: DefaultMapCenter,
+                zoom = mapLaunchConfig.zoom,
+                showRoute = mapLaunchConfig.showRoute,
+                interactive = true,
+            )
+            SharedTransitionLayout(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .mapChromeLayer(),
+            ) {
             Box(Modifier.fillMaxSize()) {
                 AssistantGradientBlurHost(blurred = hostBlurred) {
                     AnimatedContent(
                         targetState = pageWidget,
                         modifier = Modifier.fillMaxSize(),
                         transitionSpec = {
-                            EnterTransition.None togetherWith ExitTransition.None
+                            val slide = tween<IntOffset>(
+                                durationMillis = 420,
+                                easing = FastOutSlowInEasing,
+                            )
+                            val openingMap = targetState == DashboardWidget.Navigation
+                            val closingMap = initialState == DashboardWidget.Navigation &&
+                                targetState == null
+                            when {
+                                // Search bar, sidebar, and climate bar leave together to the left.
+                                // Climate keeps its shared-element morph.
+                                openingMap -> slideInHorizontally(slide) { it } togetherWith
+                                    slideOutHorizontally(slide) { -it }
+                                closingMap -> slideInHorizontally(slide) { -it } togetherWith
+                                    slideOutHorizontally(slide) { it }
+                                else -> EnterTransition.None togetherWith ExitTransition.None
+                            }
                         },
                         label = "driving_home_container_transform",
                     ) { expandedWidget ->
@@ -138,13 +175,20 @@ fun DrivingHomeScreen(
                             mapCenter = mapLaunchConfig.center,
                             initialMapZoom = mapLaunchConfig.zoom,
                             showMapRoute = mapLaunchConfig.showRoute,
+                            embedMap = false,
                             onOpenMain = onOpenMain,
                             modifier = Modifier.fillMaxSize(),
                         )
                         else -> Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .floatingSystemChromePadding(),
+                                .then(
+                                    if (expandedWidget == DashboardWidget.Navigation) {
+                                        Modifier
+                                    } else {
+                                        Modifier.floatingSystemChromePadding()
+                                    },
+                                ),
                         ) {
                             when (expandedWidget) {
                                 DashboardWidget.AdaptiveSpace -> AdaptiveSpaceScreen(
@@ -178,6 +222,7 @@ fun DrivingHomeScreen(
                                     onEvent = navigationViewModel::onEvent,
                                     onBack = collapseWidget,
                                     animatedVisibilityScope = this@AnimatedContent,
+                                    embedMap = false,
                                 )
                                 DashboardWidget.Vehicle -> VehicleScreen(
                                     uiState = vehicleState,
@@ -217,6 +262,7 @@ fun DrivingHomeScreen(
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
+            }
             }
         }
     }
