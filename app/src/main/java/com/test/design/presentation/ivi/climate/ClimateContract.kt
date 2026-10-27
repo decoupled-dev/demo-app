@@ -178,7 +178,6 @@ fun temperatureScaleDragSteps(dragPx: Float, spacingPx: Float): Int {
 
 /** Maps a horizontal touch on the fan track to a discrete blower step. */
 fun fanSpeedFromTrackPosition(positionPx: Float, widthPx: Float, maxFanSpeed: Int): Int {
-    if (maxFanSpeed <= 0 || widthPx <= 0f) return 0
     return (positionPx / widthPx * maxFanSpeed).roundToInt().coerceIn(0, maxFanSpeed)
 }
 
