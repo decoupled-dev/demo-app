@@ -47,7 +47,6 @@ import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
 import com.test.design.presentation.ivi.dashboard.widgetContainerTransform
 import com.test.design.presentation.ivi.dashboard.widgetContentSharedElement
 import com.test.design.presentation.ivi.dashboard.widgetControlsSharedElement
-import com.test.design.presentation.ivi.navigation.components.mapChromeLayer
 import com.test.design.theme.AdaptiveLayout
 import com.test.design.theme.CarBackgroundTokens
 import com.test.design.theme.CarDesignTokens
@@ -115,9 +114,7 @@ fun SharedTransitionScope.ClimateControlScreen(
                 modifier = widgetContainerTransform(
                     widget = DashboardWidget.Climate,
                     animatedVisibilityScope = animatedVisibilityScope,
-                    modifier = modifier
-                        .fillMaxSize()
-                        .mapChromeLayer(),
+                    modifier = modifier.fillMaxSize(),
                 ),
             ) {
                 ScreenBackground()

@@ -27,10 +27,6 @@ function build {
         return
     }
 
-    # Overlay cannot be runtime-granted by the app; allow by default for demos.
-    adb shell appops set com.test.design SYSTEM_ALERT_WINDOW allow | Out-Null
-    adb shell pm grant com.test.design android.permission.RECORD_AUDIO | Out-Null
-
     if ($SkipLaunch) {
         return
     }

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Controller id="parking_assistant_controller">
-    <ControllerName>com.android.systemui.car.wm.scalableui.panel.controller.BaseTaskPanelController</ControllerName>
-    <PersistentActivity>@string/parking_assistant_component</PersistentActivity>
-    <DefaultComponent>@string/parking_assistant_component</DefaultComponent>
-</Controller>

@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Controller id="media_overlay_controller">
-    <ControllerName>com.android.systemui.car.wm.scalableui.panel.controller.BaseTaskPanelController</ControllerName>
-    <PersistentActivity>@string/media_overlay_component</PersistentActivity>
-    <DefaultComponent>@string/media_overlay_component</DefaultComponent>
-</Controller>

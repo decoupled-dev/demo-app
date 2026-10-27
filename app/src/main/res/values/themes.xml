@@ -18,41 +18,4 @@
         <item name="android:windowIsTranslucent">false</item>
         <item name="android:windowShowWallpaper">false</item>
     </style>
-
-    <!-- Scalable UI TaskPanel hosts — transparent so content behind shows through. -->
-    <style name="Theme.Design.Panel" parent="Theme.Design">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowShowWallpaper">false</item>
-        <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
-    <!-- In-app / gallery translucent overlay (drawn over existing content). -->
-    <style name="Theme.Design.AssistantOverlay" parent="Theme.Design.Panel">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowIsFloating">false</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceStatusBarContrast">false</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
-        <!-- No windowBlurBehind* — crashes SurfaceFlinger on emulators; Compose scrim dims. -->
-    </style>
-
-    <!--
-      Trampoline / in-activity fallback. Transparent so AAOS can show content under the
-      assistant when overlay permission is unavailable. Primary path is the overlay service.
-    -->
-    <style name="Theme.Design.AssistantStandalone" parent="Theme.Design.Panel">
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceStatusBarContrast">false</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
-    </style>
 </resources>

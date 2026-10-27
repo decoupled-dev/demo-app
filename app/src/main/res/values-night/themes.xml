@@ -10,36 +10,4 @@
         <item name="colorControlNormal">@color/control_normal</item>
         <item name="android:forceDarkAllowed">false</item>
     </style>
-
-    <style name="Theme.Design.Panel" parent="Theme.Design">
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowShowWallpaper">false</item>
-        <item name="android:backgroundDimEnabled">false</item>
-        <item name="android:windowContentOverlay">@null</item>
-    </style>
-
-    <style name="Theme.Design.AssistantOverlay" parent="Theme.Design.Panel">
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowIsFloating">false</item>
-        <item name="android:windowFullscreen">false</item>
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceStatusBarContrast">false</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
-        <!-- No windowBlurBehind* — crashes SurfaceFlinger on emulators; Compose scrim dims. -->
-    </style>
-
-    <!-- Trampoline / fallback — transparent; primary path is the overlay service. -->
-    <style name="Theme.Design.AssistantStandalone" parent="Theme.Design.Panel">
-        <item name="android:windowDisablePreview">true</item>
-        <item name="android:windowAnimationStyle">@null</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:enforceStatusBarContrast">false</item>
-        <item name="android:enforceNavigationBarContrast">false</item>
-    </style>
 </resources>

@@ -1,7 +1,5 @@
 <resources>
     <string name="app_name">Design</string>
-    <string name="map_activity_name">Maps</string>
-    <string name="assistant_activity_name">Assistant</string>
     <string name="climate_activity_name">Climate</string>
     <string name="vehicle_activity_name">Vehicle info</string>
 </resources>

@@ -2,7 +2,7 @@
 
 Climate demonstrates directional counters, shape morphing, segmented controls, and dynamic color tints.
 
-[← Back to master guide](../../motion.md) · [Dashboard hub](./dashboard.md)
+[← Back to README](../../README.md)
 
 ---
 

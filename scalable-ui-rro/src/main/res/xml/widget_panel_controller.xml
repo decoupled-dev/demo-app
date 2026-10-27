@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<Controller id="widget_panel_controller">
-    <ControllerName>com.android.systemui.car.wm.scalableui.panel.controller.BaseTaskPanelController</ControllerName>
-    <PersistentActivity>@string/widget_component</PersistentActivity>
-    <DefaultComponent>@string/widget_component</DefaultComponent>
-</Controller>

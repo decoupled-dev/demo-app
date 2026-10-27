@@ -2,7 +2,7 @@
 
 Vehicle is the deepest motion surface — layout morphing, dynamic color, systems feedback, and a built-in **Motion Studio**.
 
-[← Back to master guide](../../motion.md) · [Dashboard hub](./dashboard.md)
+[← Back to README](../../README.md)
 
 ---
 

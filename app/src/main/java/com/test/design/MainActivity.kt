@@ -3,38 +3,54 @@ package com.test.design
 import android.content.Intent
 import android.graphics.PixelFormat
 import android.os.Bundle
-import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import android.graphics.Color as AndroidColor
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.core.view.WindowCompat
-import androidx.navigation.compose.rememberNavController
-import com.test.design.navigation.AppDestination
-import com.test.design.navigation.AppNavHost
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.test.design.presentation.DesignAppShell
-import com.test.design.presentation.assistant.ImmersiveAssistantOverlayService
-import com.test.design.presentation.ivi.dashboard.DashboardEvent
-import com.test.design.presentation.ivi.dashboard.DashboardViewModel
-import com.test.design.presentation.ivi.dashboard.FloatingSystemBarsVisibility
+import com.test.design.presentation.ivi.climate.ClimateControlScreen
+import com.test.design.presentation.ivi.climate.ClimateViewModel
 import com.test.design.presentation.ivi.dashboard.model.DashboardWidget
-import com.test.design.presentation.ivi.map.EXTRA_OPEN_DASHBOARD
+import com.test.design.presentation.ivi.vehicle.VehicleScreen
+import com.test.design.presentation.ivi.vehicle.VehicleViewModel
 
+/** Intent action to open the climate screen. */
+const val ACTION_OPEN_CLIMATE = "com.test.design.action.OPEN_CLIMATE"
+
+/** Intent action to open the vehicle info screen. */
+const val ACTION_OPEN_VEHICLE = "com.test.design.action.OPEN_VEHICLE"
+
+/** Single host for the climate and vehicle info screens, switched via a navigation rail. */
 class MainActivity : ComponentActivity() {
 
-    private var openDashboardRequest = mutableStateOf(false)
-    private val dashboardViewModel: DashboardViewModel by viewModels()
+    private val climateViewModel: ClimateViewModel by viewModels()
+    private val vehicleViewModel: VehicleViewModel by viewModels()
+    private val selectedScreen = mutableStateOf(DashboardWidget.Climate)
 
+    @OptIn(ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        FloatingSystemBarsVisibility.hide()
 
         // Keep the activity buffer opaque — transparent BLAST buffers read as a black screen
         // on the AAOS emulator (screencap pixels were RGBA 0,0,0,0).
@@ -46,73 +62,71 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(AndroidColor.TRANSPARENT),
         )
 
-        openDashboardRequest.value = intent.getBooleanExtra(EXTRA_OPEN_DASHBOARD, false)
+        applyIntent(intent)
 
         setContent {
-            val shouldOpenDashboard by openDashboardRequest
-            val navController = rememberNavController()
+            val selected by selectedScreen
+            val climateState by climateViewModel.state.collectAsStateWithLifecycle()
+            val vehicleState by vehicleViewModel.state.collectAsStateWithLifecycle()
 
-            DesignAppShell(
-                applySafeDrawingInsets = true,
-                showFloatingSystemBars = true,
-                onOpenApps = {
-                    navController.navigate(AppDestination.Dashboard) {
-                        launchSingleTop = true
+            DesignAppShell {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    NavigationRail(
+                        containerColor = Color.Transparent,
+                        modifier = Modifier.fillMaxHeight(),
+                    ) {
+                        DashboardWidget.entries.forEach { screen ->
+                            NavigationRailItem(
+                                selected = screen == selected,
+                                onClick = { selectedScreen.value = screen },
+                                icon = { Icon(screen.icon, contentDescription = null) },
+                                label = { Text(screen.title) },
+                            )
+                        }
                     }
-                },
-                onOpenSettings = {
-                    dashboardViewModel.onEvent(
-                        DashboardEvent.WidgetTapped(DashboardWidget.Settings),
-                    )
-                    val route = navController.currentBackStackEntry?.destination?.route
-                    if (route == AppDestination.Dashboard) return@DesignAppShell
-                    navController.navigate(AppDestination.DrivingHome) {
-                        popUpTo(AppDestination.DrivingHome) { inclusive = false }
-                        launchSingleTop = true
+                    SharedTransitionLayout(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        AnimatedContent(
+                            targetState = selected,
+                            transitionSpec = { fadeIn() togetherWith fadeOut() },
+                            label = "screen",
+                        ) { screen ->
+                            when (screen) {
+                                DashboardWidget.Climate -> ClimateControlScreen(
+                                    uiState = climateState,
+                                    activeTemperature = climateState.temperatureCelsius,
+                                    onEvent = climateViewModel::onEvent,
+                                    onBack = {},
+                                    animatedVisibilityScope = this@AnimatedContent,
+                                    showBack = false,
+                                    applyWindowInsets = false,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                                DashboardWidget.Vehicle -> VehicleScreen(
+                                    uiState = vehicleState,
+                                    onEvent = vehicleViewModel::onEvent,
+                                    onBack = {},
+                                    animatedVisibilityScope = this@AnimatedContent,
+                                    showBack = false,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
                     }
-                },
-                onOpenHome = {
-                    dashboardViewModel.onEvent(DashboardEvent.CollapseWidget)
-                    navController.navigate(AppDestination.DrivingHome) {
-                        popUpTo(AppDestination.DrivingHome) { inclusive = false }
-                        launchSingleTop = true
-                    }
-                },
-                onOpenAssistant = {
-                    ImmersiveAssistantOverlayService.show(this@MainActivity)
-                },
-            ) {
-                AppNavHost(
-                    navController = navController,
-                    openDashboardOnStart = shouldOpenDashboard,
-                    onDashboardOpened = { openDashboardRequest.value = false },
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-
-        val content = findViewById<android.view.View>(android.R.id.content)
-        content.setBackgroundResource(R.color.canvas_background)
-        val vto = content.viewTreeObserver
-        vto.addOnDrawListener(object : ViewTreeObserver.OnDrawListener {
-            override fun onDraw() {
-                content.post {
-                    if (vto.isAlive) {
-                        runCatching { vto.removeOnDrawListener(this) }
-                    }
-                    reportFullyDrawn()
                 }
             }
-        })
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        openDashboardRequest.value = intent.getBooleanExtra(EXTRA_OPEN_DASHBOARD, false)
+        applyIntent(intent)
     }
 
-    override fun onWindowFocusChanged(hasFocus: Boolean) {
-        super.onWindowFocusChanged(hasFocus)
+    private fun applyIntent(intent: Intent?) {
+        when (intent?.action) {
+            ACTION_OPEN_CLIMATE -> selectedScreen.value = DashboardWidget.Climate
+            ACTION_OPEN_VEHICLE -> selectedScreen.value = DashboardWidget.Vehicle
+        }
     }
 }

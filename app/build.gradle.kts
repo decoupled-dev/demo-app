@@ -42,8 +42,6 @@ android {
 }
 
 dependencies {
-    implementation(project(":assistant"))
-
     // Provided by the AAOS platform at runtime; compile against the stub jar in app/libs.
     compileOnly(files("libs/android.car.jar"))
 
@@ -62,10 +60,6 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.service)
-    implementation(libs.androidx.navigation.compose)
-    // MapLibre Native + OpenFreeMap (OpenStreetMap). No API key.
-    implementation(libs.maplibre)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
