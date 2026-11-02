@@ -82,13 +82,6 @@ import com.test.design.theme.climateDialFill
 import com.test.design.theme.climateDialInk
 import com.test.design.theme.temperatureToFraction
 
-/**
- * Home-card size measured from the live launcher widgets on this display:
- * each card window is 696×426 px at 240 dpi.
- */
-internal val HomeWidgetCardWidth = 464.dp
-internal val HomeWidgetCardHeight = 284.dp
-
 private val CardCorner = RoundedCornerShape(16.dp)
 
 /** Press feedback that does not redraw or reshape the widget corners. */
@@ -568,9 +561,11 @@ private val AlbumCorner = RoundedCornerShape(
     bottomStart = 10.dp,
 )
 
+/**
+ * Cards fill the Scalable UI panel they are hosted in; SystemUI decides the panel bounds.
+ */
 private fun Modifier.homeWidgetCard(onOpen: () -> Unit, colors: WidgetPalette): Modifier = this
-    .width(HomeWidgetCardWidth)
-    .height(HomeWidgetCardHeight)
+    .fillMaxSize()
     .clip(CardCorner)
     .background(colors.card)
     .clickable(
