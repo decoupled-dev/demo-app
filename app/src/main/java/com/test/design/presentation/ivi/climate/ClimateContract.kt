@@ -204,8 +204,8 @@ data class ClimateCapabilities(
 
     val hasComfortControls: Boolean
         get() = hasSeatHeat || hasPassengerSeatHeat || hasSteeringHeat || hasSeatVent ||
-            hasFrontDefrost || hasRearDefrost || hasRecirculation || hasSync || hasPower ||
-            hasAuto
+            hasFrontDefrost || hasRearDefrost || hasRecirculation || hasAc || hasSync ||
+            hasPower || hasAuto
 }
 
 data class ClimateUiState(

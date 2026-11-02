@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 
@@ -20,8 +21,14 @@ fun AnimatedTemperatureCounter(
     color: Color = MaterialTheme.colorScheme.onSurface,
     /** Used only to pick slide direction when the numeric value changes. */
     sortKey: Float = 0f,
+    textStyle: TextStyle? = null,
 ) {
     val motionSpec = MaterialTheme.motionScheme.defaultSpatialSpec<IntOffset>()
+    val style = textStyle ?: if (compact) {
+        MaterialTheme.typography.headlineMedium
+    } else {
+        MaterialTheme.typography.displayLarge
+    }
 
     AnimatedContent(
         targetState = Triple(temperatureLabel, sortKey, compact),
@@ -32,14 +39,10 @@ fun AnimatedTemperatureCounter(
                 slideOutVertically(animationSpec = motionSpec) { height -> -direction * height }
         },
         label = "temperature_counter",
-    ) { (label, _, isCompact) ->
+    ) { (label, _, _) ->
         Text(
             text = label,
-            style = if (isCompact) {
-                MaterialTheme.typography.headlineMedium
-            } else {
-                MaterialTheme.typography.displayLarge
-            },
+            style = style,
             color = color,
             textAlign = TextAlign.Center,
         )
