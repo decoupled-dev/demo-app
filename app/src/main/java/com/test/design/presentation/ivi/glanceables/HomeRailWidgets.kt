@@ -11,9 +11,12 @@ import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,6 +40,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.node.DelegatableNode
@@ -57,6 +62,8 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.test.design.R
@@ -82,6 +89,81 @@ import com.test.design.theme.climateDialFill
 import com.test.design.theme.climateDialInk
 import com.test.design.theme.temperatureToFraction
 
+// ---------------------------------------------------------------------------
+// Adaptive sizing
+// ---------------------------------------------------------------------------
+
+/** Design reference for the short, wide card (the original launcher widget slot). */
+internal val CompactReferenceWidth = 464.dp
+internal val CompactReferenceHeight = 284.dp
+
+/** Design reference for the tall card (a full-height Scalable UI column). */
+internal val TallReferenceHeight = 600.dp
+
+private const val MinWidgetScale = 0.7f
+private const val MaxWidgetScale = 1.8f
+
+/**
+ * Size class and scale for a home card, derived from the panel SystemUI gives it.
+ *
+ * [tall] switches to a stacked layout that uses the extra height for bigger
+ * controls and more content. [scale] grows or shrinks type, controls, and
+ * spacing so the chosen layout fits the panel without leaving dead space.
+ */
+@Immutable
+internal data class WidgetMetrics(val scale: Float, val tall: Boolean) {
+    fun dp(value: Float): Dp = (value * scale).dp
+    fun dp(value: Int): Dp = dp(value.toFloat())
+    fun sp(value: Float): TextUnit = (value * scale).sp
+    fun sp(value: Int): TextUnit = sp(value.toFloat())
+}
+
+internal fun widgetMetricsFor(width: Dp, height: Dp): WidgetMetrics {
+    if (width <= 0.dp || height <= 0.dp) return WidgetMetrics(1f, tall = false)
+    // Taller than ~4:3 (w:h) gets the stacked layout.
+    val tall = height >= width * 0.75f
+    val referenceHeight = if (tall) TallReferenceHeight else CompactReferenceHeight
+    val scale = minOf(width / CompactReferenceWidth, height / referenceHeight)
+        .coerceIn(MinWidgetScale, MaxWidgetScale)
+    return WidgetMetrics(scale, tall)
+}
+
+private val LocalWidgetMetrics = staticCompositionLocalOf { WidgetMetrics(1f, tall = false) }
+
+/**
+ * Card shell shared by every home widget: fills the Scalable UI panel, measures it,
+ * and hands the resulting [WidgetMetrics] to [content].
+ */
+@Composable
+private fun AdaptiveWidgetCard(
+    onOpen: () -> Unit,
+    colors: WidgetPalette,
+    background: Brush,
+    modifier: Modifier = Modifier,
+    content: @Composable (WidgetMetrics) -> Unit,
+) {
+    FixedWidgetCorners {
+        BoxWithConstraints(
+            modifier = modifier
+                .fillMaxSize()
+                .clip(CardCorner)
+                .background(colors.card)
+                .background(background)
+                .lightCardStroke(colors)
+                .clickable(interactionSource = null, indication = null, onClick = onOpen),
+        ) {
+            val metrics = widgetMetricsFor(maxWidth, maxHeight)
+            CompositionLocalProvider(LocalWidgetMetrics provides metrics) {
+                content(metrics)
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Shared styling
+// ---------------------------------------------------------------------------
+
 private val CardCorner = RoundedCornerShape(16.dp)
 
 /** Press feedback that does not redraw or reshape the widget corners. */
@@ -104,7 +186,7 @@ private fun Modifier.widgetControlClick(onClick: () -> Unit): Modifier = clickab
     indication = null,
     onClick = onClick,
 )
-private val DialCorner = RoundedCornerShape(20.dp)
+
 private val EcoGreen = Color(0xFF3DDC84)
 private val ComfortBlue = Color(0xFF7EB6FF)
 private val SportOrange = Color(0xFFFF6A3D)
@@ -156,9 +238,27 @@ private fun widgetPalette(): WidgetPalette {
     return if (dark) DarkWidgets else LightWidgets
 }
 
+private fun Modifier.lightCardStroke(colors: WidgetPalette): Modifier =
+    if (colors.light) border(1.dp, LightCardStroke, CardCorner) else this
+
+@Composable
+private fun CardTitle(text: String, colors: WidgetPalette, m: WidgetMetrics) {
+    Text(
+        text = text,
+        color = colors.title,
+        fontSize = m.sp(if (m.tall) 24 else 22),
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Climate
+// ---------------------------------------------------------------------------
+
 /**
- * Climate card in the climate screen's language: ambient glow, one temperature dial,
- * and a quiet fan and airflow line. Not a scaled copy of the full dual-zone screen.
+ * Climate card in the climate screen's language: ambient glow, a temperature dial,
+ * and a quiet fan and airflow line. Tall panels add the passenger zone as its own control.
  */
 @Composable
 fun ClimateQuarter(
@@ -184,134 +284,273 @@ fun ClimateQuarter(
     val glowAlpha = if (colors.light) 0.22f else 0.28f
     val passengerAlpha = if (colors.light) 0.12f else 0.18f
 
-    FixedWidgetCorners {
-    Column(
-        modifier = modifier
-            .homeWidgetCard(onOpenMain, colors)
-            .background(
-                Brush.horizontalGradient(
-                    0f to glow.copy(alpha = glowAlpha),
-                    0.55f to colors.card,
-                    1f to passengerGlow.copy(alpha = passengerAlpha),
-                ),
-            )
-            .lightCardStroke(colors)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+    AdaptiveWidgetCard(
+        onOpen = onOpenMain,
+        colors = colors,
+        background = Brush.horizontalGradient(
+            0f to glow.copy(alpha = glowAlpha),
+            0.55f to colors.card,
+            1f to passengerGlow.copy(alpha = passengerAlpha),
+        ),
+        modifier = modifier,
+    ) { m ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = m.dp(20), vertical = m.dp(if (m.tall) 20 else 16)),
         ) {
-            Text(
-                text = "Climate",
-                color = colors.title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            SoftChip(
-                text = state.temperatureUnit.shortLabel,
-                colors = colors,
-                onClick = { onEvent(ClimateEvent.ToggleTemperatureUnit) },
-            )
-            if (state.capabilities.hasAc) {
+            ClimateHeader(state, onEvent, accent, colors, m)
+            if (m.tall) {
+                TallClimateBody(state, onEvent, fraction, passengerFraction, accent, colors, m)
+            } else {
+                CompactClimateBody(state, onEvent, fraction, accent, colors, m)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ClimateHeader(
+    state: ClimateUiState,
+    onEvent: (ClimateEvent) -> Unit,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        CardTitle("Climate", colors, m)
+        Spacer(modifier = Modifier.weight(1f))
+        SoftChip(
+            text = state.temperatureUnit.shortLabel,
+            colors = colors,
+            onClick = { onEvent(ClimateEvent.ToggleTemperatureUnit) },
+        )
+        if (state.capabilities.hasAc) {
             SoftChip(
                 text = "A/C",
                 selected = state.isAcEnabled,
                 tint = accent,
                 colors = colors,
-                    onClick = { onEvent(ClimateEvent.ToggleAc) },
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-        }
-
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-        ) {
-            RoundStepButton(
-                contentDescription = "Decrease temperature",
-                icon = Icons.Default.Remove,
-                onClick = { onEvent(ClimateEvent.AdjustZoneTemperature(ClimateZone.Driver, -1)) },
-            )
-            Column(
-                modifier = Modifier
-                    .width(180.dp)
-                    .height(116.dp)
-                    .clip(DialCorner)
-                    .background(climateDialFill(fraction, colors.light))
-                    .border(
-                        1.dp,
-                        accent.copy(alpha = if (colors.light) 0.38f else 0.45f),
-                        DialCorner,
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Text(
-                    text = state.formatTemperature(state.temperatureCelsius),
-                    color = climateDialInk(fraction, colors.light),
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                )
-                Text(
-                    text = ClimateZone.Driver.label,
-                    color = climateDialInk(fraction, colors.light).copy(alpha = 0.72f),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            RoundStepButton(
-                contentDescription = "Increase temperature",
-                icon = Icons.Default.Add,
-                onClick = { onEvent(ClimateEvent.AdjustZoneTemperature(ClimateZone.Driver, 1)) },
+                onClick = { onEvent(ClimateEvent.ToggleAc) },
+                modifier = Modifier.padding(start = m.dp(8)),
             )
         }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (state.capabilities.hasPassengerTemp) {
-                Text(
-                    text = "Passenger ${state.formatTemperature(state.passengerTemperatureCelsius)}",
-                    color = colors.label,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            if (state.capabilities.hasFanSpeed) {
-                FanBars(
-                    fanSpeed = state.fanSpeed,
-                    maxFanSpeed = state.maxFanSpeed,
-                    tint = accent,
-                    track = colors.track,
-                    onSelected = { onEvent(ClimateEvent.SetFanSpeed(it)) },
-                )
-            }
-            if (state.capabilities.hasAirflowControls) {
-                AirflowMark(
-                    mode = state.airflowMode,
-                    tint = accent,
-                    onClick = {
-                        val modes = airflowChoices(state)
-                        if (modes.isEmpty()) return@AirflowMark
-                        val next = modes[(modes.indexOf(state.airflowMode) + 1).mod(modes.size)]
-                        onEvent(ClimateEvent.SelectAirflow(next))
-                    },
-                    modifier = Modifier.padding(start = 10.dp),
-                )
-            }
-        }
-    }
     }
 }
+
+@Composable
+private fun ColumnScope.CompactClimateBody(
+    state: ClimateUiState,
+    onEvent: (ClimateEvent) -> Unit,
+    fraction: Float,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+) {
+    ZoneStepper(
+        zone = ClimateZone.Driver,
+        state = state,
+        fraction = fraction,
+        onEvent = onEvent,
+        colors = colors,
+        dialWidth = m.dp(180),
+        dialHeight = m.dp(116),
+        temperatureSize = m.sp(42),
+        buttonSize = m.dp(52),
+        modifier = Modifier
+            .weight(1f)
+            .fillMaxWidth(),
+    )
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        if (state.capabilities.hasPassengerTemp) {
+            Text(
+                text = "Passenger ${state.formatTemperature(state.passengerTemperatureCelsius)}",
+                color = colors.label,
+                fontSize = m.sp(17),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+        Spacer(modifier = Modifier.weight(1f))
+        ClimateAirControls(state, onEvent, accent, colors, m, fanWidth = m.dp(108))
+    }
+}
+
+@Composable
+private fun ColumnScope.TallClimateBody(
+    state: ClimateUiState,
+    onEvent: (ClimateEvent) -> Unit,
+    fraction: Float,
+    passengerFraction: Float,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+) {
+    Spacer(modifier = Modifier.weight(0.5f))
+    ZoneStepper(
+        zone = ClimateZone.Driver,
+        state = state,
+        fraction = fraction,
+        onEvent = onEvent,
+        colors = colors,
+        dialWidth = m.dp(212),
+        dialHeight = m.dp(160),
+        temperatureSize = m.sp(60),
+        buttonSize = m.dp(60),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    if (state.capabilities.hasPassengerTemp) {
+        Spacer(modifier = Modifier.weight(0.35f))
+        ZoneStepper(
+            zone = ClimateZone.Passenger,
+            state = state,
+            fraction = passengerFraction,
+            onEvent = onEvent,
+            colors = colors,
+            dialWidth = m.dp(212),
+            dialHeight = m.dp(96),
+            temperatureSize = m.sp(36),
+            buttonSize = m.dp(48),
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+    Spacer(modifier = Modifier.weight(0.5f))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(m.dp(16)))
+            .background(colors.control)
+            .padding(horizontal = m.dp(16), vertical = m.dp(12)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "Fan",
+            color = colors.label,
+            fontSize = m.sp(17),
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(end = m.dp(14)),
+        )
+        ClimateAirControls(
+            state = state,
+            onEvent = onEvent,
+            accent = accent,
+            colors = colors,
+            m = m,
+            fanWidth = null,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** One zone: − / dial / +. Used at hero size for the driver and smaller for the passenger. */
+@Composable
+private fun ZoneStepper(
+    zone: ClimateZone,
+    state: ClimateUiState,
+    fraction: Float,
+    onEvent: (ClimateEvent) -> Unit,
+    colors: WidgetPalette,
+    dialWidth: Dp,
+    dialHeight: Dp,
+    temperatureSize: TextUnit,
+    buttonSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val m = LocalWidgetMetrics.current
+    val accent = climateContentAccent(fraction, colors.light)
+    val ink = climateDialInk(fraction, colors.light)
+    val celsius = if (zone == ClimateZone.Driver) state.temperatureCelsius else state.passengerTemperatureCelsius
+    val dialShape = RoundedCornerShape(m.dp(20))
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(m.dp(16), Alignment.CenterHorizontally),
+    ) {
+        RoundStepButton(
+            contentDescription = "Decrease ${zone.label.lowercase()} temperature",
+            icon = Icons.Default.Remove,
+            size = buttonSize,
+            onClick = { onEvent(ClimateEvent.AdjustZoneTemperature(zone, -1)) },
+        )
+        Column(
+            modifier = Modifier
+                .width(dialWidth)
+                .height(dialHeight)
+                .clip(dialShape)
+                .background(climateDialFill(fraction, colors.light))
+                .border(1.dp, accent.copy(alpha = if (colors.light) 0.38f else 0.45f), dialShape),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = state.formatTemperature(celsius),
+                color = ink,
+                fontSize = temperatureSize,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+            Text(
+                text = zone.label,
+                color = ink.copy(alpha = 0.72f),
+                fontSize = m.sp(16),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+        RoundStepButton(
+            contentDescription = "Increase ${zone.label.lowercase()} temperature",
+            icon = Icons.Default.Add,
+            size = buttonSize,
+            onClick = { onEvent(ClimateEvent.AdjustZoneTemperature(zone, 1)) },
+        )
+    }
+}
+
+/** Fan bars plus airflow toggle. [fanWidth] null lets the bars take the remaining width. */
+@Composable
+private fun ClimateAirControls(
+    state: ClimateUiState,
+    onEvent: (ClimateEvent) -> Unit,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+    fanWidth: Dp?,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        if (state.capabilities.hasFanSpeed) {
+            FanBars(
+                fanSpeed = state.fanSpeed,
+                maxFanSpeed = state.maxFanSpeed,
+                tint = accent,
+                track = colors.track,
+                onSelected = { onEvent(ClimateEvent.SetFanSpeed(it)) },
+                modifier = if (fanWidth != null) {
+                    Modifier.width(fanWidth).height(m.dp(28))
+                } else {
+                    Modifier.weight(1f).height(m.dp(36))
+                },
+            )
+        }
+        if (state.capabilities.hasAirflowControls) {
+            AirflowMark(
+                mode = state.airflowMode,
+                tint = accent,
+                onClick = {
+                    val modes = airflowChoices(state)
+                    if (modes.isEmpty()) return@AirflowMark
+                    val next = modes[(modes.indexOf(state.airflowMode) + 1).mod(modes.size)]
+                    onEvent(ClimateEvent.SelectAirflow(next))
+                },
+                modifier = Modifier.padding(start = m.dp(10)),
+            )
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Vehicle
+// ---------------------------------------------------------------------------
 
 /**
  * Vehicle card in the vehicle screen's language: mode-colored gauge and the drive stage.
@@ -326,81 +565,134 @@ fun VehicleQuarter(
 ) {
     val colors = widgetPalette()
     val accent = driveAccent(state.driveMode, colors.light)
-    FixedWidgetCorners {
-    Box(
-        modifier = modifier
-            .homeWidgetCard(onOpenMain, colors)
-            .background(
-                Brush.verticalGradient(
-                    listOf(accent.copy(alpha = if (colors.light) 0.10f else 0.16f), colors.card),
-                ),
-            )
-            .lightCardStroke(colors),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            CompactEnergyGauge(
-                percent = state.batteryPercent,
-                rangeLabel = state.rangeLabel,
-                accent = accent,
-                colors = colors,
-                modifier = Modifier
-                    .width(148.dp)
-                    .fillMaxHeight(),
-            )
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                Text(
-                    text = "DRIVE",
-                    color = colors.label,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.6.sp,
-                )
-                Text(
-                    text = state.driveMode.label,
-                    color = colors.title,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = state.driveMode.subtitle,
-                    color = accent,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                )
-                Image(
-                    painter = painterResource(R.drawable.vehicle_suv_side),
-                    contentDescription = null,
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                )
-                DriveModeRow(
-                    selected = state.driveMode,
-                    accent = accent,
-                    colors = colors,
-                    onSelected = { onEvent(VehicleEvent.SelectDriveMode(it)) },
-                )
-            }
+    AdaptiveWidgetCard(
+        onOpen = onOpenMain,
+        colors = colors,
+        background = Brush.verticalGradient(
+            listOf(accent.copy(alpha = if (colors.light) 0.10f else 0.16f), colors.card),
+        ),
+        modifier = modifier,
+    ) { m ->
+        if (m.tall) {
+            TallVehicleBody(state, onEvent, accent, colors, m)
+        } else {
+            CompactVehicleBody(state, onEvent, accent, colors, m)
         }
     }
+}
+
+@Composable
+private fun CompactVehicleBody(
+    state: VehicleUiState,
+    onEvent: (VehicleEvent) -> Unit,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = m.dp(16), end = m.dp(16), top = m.dp(16), bottom = m.dp(14)),
+        horizontalArrangement = Arrangement.spacedBy(m.dp(16)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        CompactEnergyGauge(
+            percent = state.batteryPercent,
+            rangeLabel = state.rangeLabel,
+            accent = accent,
+            colors = colors,
+            modifier = Modifier
+                .fillMaxHeight()
+                .aspectRatio(148f / 254f, matchHeightConstraintsFirst = true),
+        )
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(m.dp(6)),
+        ) {
+            DriveModeHeading(state, accent, colors, m)
+            VehicleImage(Modifier.weight(1f).fillMaxWidth())
+            DriveModeRow(state.driveMode, accent, colors) { onEvent(VehicleEvent.SelectDriveMode(it)) }
+        }
     }
 }
+
+@Composable
+private fun TallVehicleBody(
+    state: VehicleUiState,
+    onEvent: (VehicleEvent) -> Unit,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = m.dp(20), vertical = m.dp(20)),
+        verticalArrangement = Arrangement.spacedBy(m.dp(10)),
+    ) {
+        DriveModeHeading(state, accent, colors, m)
+        CompactEnergyGauge(
+            percent = state.batteryPercent,
+            rangeLabel = state.rangeLabel,
+            accent = accent,
+            colors = colors,
+            modifier = Modifier
+                .weight(1.2f)
+                .fillMaxWidth(),
+        )
+        VehicleImage(Modifier.weight(0.8f).fillMaxWidth())
+        DriveModeRow(state.driveMode, accent, colors) { onEvent(VehicleEvent.SelectDriveMode(it)) }
+    }
+}
+
+@Composable
+private fun DriveModeHeading(state: VehicleUiState, accent: Color, colors: WidgetPalette, m: WidgetMetrics) {
+    Column(verticalArrangement = Arrangement.spacedBy(m.dp(4))) {
+        Text(
+            text = "DRIVE",
+            color = colors.label,
+            fontSize = m.sp(11),
+            fontWeight = FontWeight.Medium,
+            letterSpacing = m.sp(1.6f),
+        )
+        Text(
+            text = state.driveMode.label,
+            color = colors.title,
+            fontSize = m.sp(if (m.tall) 30 else 26),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
+        Text(
+            text = state.driveMode.subtitle,
+            color = accent,
+            fontSize = m.sp(13),
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun VehicleImage(modifier: Modifier) {
+    Image(
+        painter = painterResource(R.drawable.vehicle_suv_side),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = modifier,
+    )
+}
+
+// ---------------------------------------------------------------------------
+// Media
+// ---------------------------------------------------------------------------
 
 /**
  * Media card on the system home: album art, track line, progress, and transport.
  * A tap on the card opens the playing source. Transport buttons stay on the card.
+ * Tall panels stack hero artwork above the track details.
  */
 @Composable
 fun MediaQuarter(
@@ -412,170 +704,197 @@ fun MediaQuarter(
     val colors = widgetPalette()
     val accent = mediaAccent(colors.light)
     val source = friendlySourceName(state.sourceLabel.ifBlank { state.source.label })
-    FixedWidgetCorners {
-    Column(
-        modifier = modifier
-            .homeWidgetCard(onOpenMain, colors)
-            .background(
-                Brush.linearGradient(
-                    if (colors.light) {
-                        listOf(Color(0xFFF4F7FC), Color.White, Color(0xFFFFF7F8))
-                    } else {
-                        listOf(Color(0xFF1A2744), colors.card, Color(0xFF241820))
-                    },
-                ),
-            )
-            .lightCardStroke(colors)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Media",
-                color = colors.title,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = source,
-                color = colors.label,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-        Row(
+    AdaptiveWidgetCard(
+        onOpen = onOpenMain,
+        colors = colors,
+        background = Brush.linearGradient(
+            if (colors.light) {
+                listOf(Color(0xFFF4F7FC), Color.White, Color(0xFFFFF7F8))
+            } else {
+                listOf(Color(0xFF1A2744), colors.card, Color(0xFF241820))
+            },
+        ),
+        modifier = modifier,
+    ) { m ->
+        Column(
             modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .fillMaxSize()
+                .padding(horizontal = m.dp(18), vertical = m.dp(if (m.tall) 18 else 14)),
+            verticalArrangement = Arrangement.spacedBy(m.dp(12)),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(148.dp)
-                    .clip(AlbumCorner)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(Color(0xFF5B8DEF), Color(0xFF1A1A2E), Color(0xFF8E3A4A)),
-                        ),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                MediaArtInitials(
-                    album = state.currentTrack.album,
-                    artwork = state.artwork,
-                    labelSize = 34.sp,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-            Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                CardTitle("Media", colors, m)
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = state.currentTrack.title,
-                    color = colors.title,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = state.nowPlayingSubtitle(),
+                    text = source,
                     color = colors.label,
-                    fontSize = 17.sp,
+                    fontSize = m.sp(16),
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+            if (m.tall) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(colors.track),
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Box(
+                    AlbumArt(
+                        state = state,
+                        labelSize = m.sp(56),
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(state.progress.coerceIn(0f, 1f))
-                            .background(accent),
+                            .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     )
                 }
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Text(state.elapsedLabel, color = colors.label, fontSize = 15.sp)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(state.currentTrack.durationLabel, color = colors.label, fontSize = 15.sp)
-                }
+                TrackDetails(state, onEvent, accent, colors, m, centered = true)
+            } else {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(m.dp(16)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RoundStepButton(
-                        contentDescription = "Previous track",
-                        icon = Icons.Default.SkipPrevious,
-                        onClick = { onEvent(MediaEvent.PreviousTrack) },
-                    )
-                    Box(
+                    AlbumArt(
+                        state = state,
+                        labelSize = m.sp(34),
                         modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(accent)
-                            .semantics {
-                                role = Role.Button
-                                contentDescription = if (state.isPlaying) "Pause" else "Play"
-                            }
-                            .widgetControlClick { onEvent(MediaEvent.TogglePlayback) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = colors.ink,
-                            modifier = Modifier.size(32.dp),
-                        )
-                    }
-                    RoundStepButton(
-                        contentDescription = "Next track",
-                        icon = Icons.Default.SkipNext,
-                        onClick = { onEvent(MediaEvent.NextTrack) },
+                            .fillMaxHeight()
+                            .aspectRatio(1f, matchHeightConstraintsFirst = true),
                     )
+                    Box(modifier = Modifier.weight(1f)) {
+                        TrackDetails(state, onEvent, accent, colors, m, centered = false)
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun AlbumArt(state: MediaUiState, labelSize: TextUnit, modifier: Modifier) {
+    val m = LocalWidgetMetrics.current
+    Box(
+        modifier = modifier
+            .clip(
+                RoundedCornerShape(
+                    topStart = m.dp(18),
+                    topEnd = m.dp(10),
+                    bottomEnd = m.dp(18),
+                    bottomStart = m.dp(10),
+                ),
+            )
+            .background(
+                Brush.linearGradient(listOf(Color(0xFF5B8DEF), Color(0xFF1A1A2E), Color(0xFF8E3A4A))),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        MediaArtInitials(
+            album = state.currentTrack.album,
+            artwork = state.artwork,
+            labelSize = labelSize,
+            modifier = Modifier.fillMaxSize(),
+        )
     }
 }
 
-private val AlbumCorner = RoundedCornerShape(
-    topStart = 18.dp,
-    topEnd = 10.dp,
-    bottomEnd = 18.dp,
-    bottomStart = 10.dp,
-)
+@Composable
+private fun TrackDetails(
+    state: MediaUiState,
+    onEvent: (MediaEvent) -> Unit,
+    accent: Color,
+    colors: WidgetPalette,
+    m: WidgetMetrics,
+    centered: Boolean,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(m.dp(8)),
+        horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start,
+    ) {
+        Text(
+            text = state.currentTrack.title,
+            color = colors.title,
+            fontSize = m.sp(if (m.tall) 28 else 26),
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = state.nowPlayingSubtitle(),
+            color = colors.label,
+            fontSize = m.sp(17),
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Box(
+            modifier = Modifier
+                .padding(top = m.dp(4))
+                .fillMaxWidth()
+                .height(m.dp(4))
+                .clip(RoundedCornerShape(2.dp))
+                .background(colors.track),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(state.progress.coerceIn(0f, 1f))
+                    .background(accent),
+            )
+        }
+        Row(modifier = Modifier.fillMaxWidth()) {
+            Text(state.elapsedLabel, color = colors.label, fontSize = m.sp(15))
+            Spacer(modifier = Modifier.weight(1f))
+            Text(state.currentTrack.durationLabel, color = colors.label, fontSize = m.sp(15))
+        }
+        val playSize = m.dp(if (m.tall) 68 else 56)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(m.dp(if (m.tall) 20 else 10), Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RoundStepButton(
+                contentDescription = "Previous track",
+                icon = Icons.Default.SkipPrevious,
+                size = m.dp(if (m.tall) 56 else 52),
+                onClick = { onEvent(MediaEvent.PreviousTrack) },
+            )
+            Box(
+                modifier = Modifier
+                    .size(playSize)
+                    .clip(CircleShape)
+                    .background(accent)
+                    .semantics {
+                        role = Role.Button
+                        contentDescription = if (state.isPlaying) "Pause" else "Play"
+                    }
+                    .widgetControlClick { onEvent(MediaEvent.TogglePlayback) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = if (state.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = null,
+                    tint = colors.ink,
+                    modifier = Modifier.size(playSize * 0.57f),
+                )
+            }
+            RoundStepButton(
+                contentDescription = "Next track",
+                icon = Icons.Default.SkipNext,
+                size = m.dp(if (m.tall) 56 else 52),
+                onClick = { onEvent(MediaEvent.NextTrack) },
+            )
+        }
+    }
+}
 
-/**
- * Cards fill the Scalable UI panel they are hosted in; SystemUI decides the panel bounds.
- */
-private fun Modifier.homeWidgetCard(onOpen: () -> Unit, colors: WidgetPalette): Modifier = this
-    .fillMaxSize()
-    .clip(CardCorner)
-    .background(colors.card)
-    .clickable(
-        interactionSource = null,
-        indication = null,
-        onClick = onOpen,
-    )
-
-private fun Modifier.lightCardStroke(colors: WidgetPalette): Modifier =
-    if (colors.light) border(1.dp, LightCardStroke, CardCorner) else this
+// ---------------------------------------------------------------------------
+// Building blocks
+// ---------------------------------------------------------------------------
 
 @Composable
 private fun CompactEnergyGauge(
@@ -585,12 +904,18 @@ private fun CompactEnergyGauge(
     colors: WidgetPalette,
     modifier: Modifier = Modifier,
 ) {
+    val m = LocalWidgetMetrics.current
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-            val stroke = 9.dp.toPx()
+        Canvas(modifier = Modifier.fillMaxSize().padding(m.dp(8))) {
             val diameter = size.minDimension
-            val arc = Size(diameter, diameter)
-            val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+            // Stroke keeps a consistent weight relative to the ring.
+            val stroke = (diameter * 0.068f).coerceAtLeast(6.dp.toPx())
+            val inset = stroke / 2f
+            val arc = Size(diameter - stroke, diameter - stroke)
+            val topLeft = Offset(
+                (size.width - diameter) / 2f + inset,
+                (size.height - diameter) / 2f + inset,
+            )
             drawArc(
                 color = colors.track,
                 startAngle = 135f,
@@ -603,7 +928,7 @@ private fun CompactEnergyGauge(
             drawArc(
                 color = accent,
                 startAngle = 135f,
-                sweepAngle = 270f * (percent / 100f),
+                sweepAngle = 270f * (percent.coerceIn(0, 100) / 100f),
                 useCenter = false,
                 topLeft = topLeft,
                 size = arc,
@@ -614,13 +939,13 @@ private fun CompactEnergyGauge(
             Text(
                 text = "$percent%",
                 color = colors.title,
-                fontSize = 32.sp,
+                fontSize = m.sp(if (m.tall) 44 else 32),
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
                 text = rangeLabel,
                 color = colors.label,
-                fontSize = 13.sp,
+                fontSize = m.sp(if (m.tall) 16 else 13),
                 fontWeight = FontWeight.Medium,
             )
         }
@@ -634,11 +959,12 @@ private fun DriveModeRow(
     colors: WidgetPalette,
     onSelected: (DriveMode) -> Unit,
 ) {
+    val m = LocalWidgetMetrics.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(36.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .height(m.dp(if (m.tall) 48 else 36))
+            .clip(RoundedCornerShape(m.dp(12)))
             .background(colors.modeTrack),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -648,8 +974,8 @@ private fun DriveModeRow(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .padding(3.dp)
-                    .clip(RoundedCornerShape(10.dp))
+                    .padding(m.dp(3))
+                    .clip(RoundedCornerShape(m.dp(10)))
                     .background(if (on) accent else Color.Transparent)
                     .semantics { contentDescription = mode.label }
                     .widgetControlClick { onSelected(mode) },
@@ -659,7 +985,7 @@ private fun DriveModeRow(
                     imageVector = mode.widgetIcon(),
                     contentDescription = null,
                     tint = if (on) colors.ink else colors.label,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(m.dp(if (m.tall) 22 else 16)),
                 )
             }
         }
@@ -673,13 +999,13 @@ private fun FanBars(
     tint: Color,
     track: Color,
     onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
+    val m = LocalWidgetMetrics.current
     val steps = maxFanSpeed.coerceAtLeast(1)
     Row(
-        modifier = Modifier
-            .width(108.dp)
-            .height(28.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(m.dp(4)),
         verticalAlignment = Alignment.Bottom,
     ) {
         for (step in 1..steps) {
@@ -687,7 +1013,7 @@ private fun FanBars(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight(0.4f + 0.6f * step / steps)
-                    .clip(RoundedCornerShape(2.dp))
+                    .clip(RoundedCornerShape(m.dp(2)))
                     .background(if (step <= fanSpeed) tint else track)
                     .semantics { contentDescription = "Fan $step" }
                     .widgetControlClick { onSelected(if (step == fanSpeed) 0 else step) },
@@ -703,9 +1029,10 @@ private fun AirflowMark(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val m = LocalWidgetMetrics.current
     Box(
         modifier = modifier
-            .size(40.dp)
+            .size(m.dp(if (m.tall) 48 else 40))
             .clip(CircleShape)
             .semantics { contentDescription = mode.label }
             .widgetControlClick(onClick),
@@ -715,7 +1042,7 @@ private fun AirflowMark(
             painter = painterResource(mode.widgetIcon),
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(26.dp),
+            modifier = Modifier.size(m.dp(if (m.tall) 30 else 26)),
         )
     }
 }
@@ -729,17 +1056,18 @@ private fun SoftChip(
     selected: Boolean = false,
     tint: Color = ComfortBlue,
 ) {
+    val m = LocalWidgetMetrics.current
     val label = if (selected && colors.light) lerp(tint, colors.title, 0.45f) else tint
     Text(
         text = text,
         color = if (selected) label else colors.title,
-        fontSize = 16.sp,
+        fontSize = m.sp(16),
         fontWeight = FontWeight.SemiBold,
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(m.dp(10)))
             .background(if (selected) tint.copy(alpha = if (colors.light) 0.22f else 0.18f) else colors.control)
             .widgetControlClick(onClick)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
+            .padding(horizontal = m.dp(12), vertical = m.dp(6)),
     )
 }
 
@@ -747,12 +1075,13 @@ private fun SoftChip(
 private fun RoundStepButton(
     contentDescription: String,
     icon: ImageVector,
+    size: Dp,
     onClick: () -> Unit,
 ) {
     val colors = widgetPalette()
     Box(
         modifier = Modifier
-            .size(52.dp)
+            .size(size)
             .clip(CircleShape)
             .background(colors.control)
             .semantics {
@@ -762,7 +1091,7 @@ private fun RoundStepButton(
             .widgetControlClick(onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = colors.onControl, modifier = Modifier.size(26.dp))
+        Icon(icon, contentDescription = null, tint = colors.onControl, modifier = Modifier.size(size * 0.5f))
     }
 }
 
